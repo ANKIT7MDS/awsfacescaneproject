@@ -96,10 +96,10 @@
   const API_BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search"; // stage
   const URLS = {
     health:        `${API_BASE}/health`,
-    genLink:       `${API_BASE}/generate-link`,
-    updateLink:    `${API_BASE}/update-link`,   // (new endpoint – Lambda patch below)
+    genLink:       `${API_BASE}/admin/generate-link`,
+    updateLink:    `${API_BASE}/admin/update-link`,   // (new endpoint – Lambda patch below)
     listFolders:   `${API_BASE}/admin/folders`, // (new endpoint – Lambda patch below)
-    upload:        `${API_BASE}/upload`
+    upload:        `${API_BASE}/admin/upload`
   };
 
   const $ = s => document.querySelector(s);
