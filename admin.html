@@ -8,98 +8,232 @@
     :root{--bg:#0b0d10;--card:#12151a;--muted:#97a3b6;--brand:#14b8a6;--text:#edf2f7}
     *{box-sizing:border-box}
     html,body{height:100%} body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter}
-    .wrap{max-width:960px;margin:0 auto;padding:16px}
+    .wrap{max-width:1080px;margin:0 auto;padding:16px}
     .row{display:grid;gap:12px}
     .card{background:var(--card);border:1px solid #1b2130;border-radius:18px;padding:16px}
     .btn{background:var(--brand);color:#001b16;border:0;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
-    .input{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #233045;background:#0e1218;color:var(--text)}
+    .input, select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #233045;background:#0e1218;color:var(--text)}
     .small{font-size:12px;color:var(--muted)}
-    @media(min-width:760px){.cols{grid-template-columns:1fr 1fr}}
-    textarea{width:100%;min-height:140px;border-radius:12px;border:1px solid #233045;background:#0e1218;color:var(--text);padding:10px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    textarea{width:100%;min-height:160px;border-radius:12px;border:1px solid #233045;background:#0e1218;color:var(--text);padding:10px}
     .badge{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;background:#0e1625;border:1px solid #1d2740;color:var(--muted);font-size:12px}
+    @media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}}
+    progress{width:100%}
+    .pill{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #1d2740;background:#0e1625;margin:2px}
   </style>
 </head>
 <body>
 <div class="wrap">
   <div class="row">
-    <div class="card"><div class="badge">Admin Panel</div></div>
+    <div class="card" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="badge">Admin Panel</div>
+      <div class="badge">API: <span id="api-status">checking…</span></div>
+    </div>
 
-    <div class="row cols">
+    <div class="grid3">
+      <!-- Auth & Folder management -->
       <div class="card row">
+        <h3 style="margin:0">🔐 Auth & Folders</h3>
         <label class="small">Admin Token</label>
         <input id="token" class="input" placeholder="ChangeMe_Secret_123" />
-        <label class="small">Folder ID</label>
-        <input id="folder" class="input" value="wedding-x" />
-        <button id="btnLink" class="btn">🔗 Generate Link</button>
-        <div class="small">Link ID: <b id="linkId">—</b></div>
+        <div class="grid2">
+          <div class="row">
+            <label class="small">Select Folder</label>
+            <select id="folder" class="input"></select>
+          </div>
+          <div class="row">
+            <label class="small">Create New Folder</label>
+            <div style="display:flex;gap:8px">
+              <input id="newFolder" class="input" placeholder="e.g. bjpevent-2025-08-15" />
+              <button class="btn" id="btnAddFolder">Add</button>
+            </div>
+          </div>
+        </div>
+        <button class="btn" id="btnLoadFolders">↻ Load Folders</button>
+        <div class="small">Tip: फोल्डर असल में S3 प्रीफिक्स है—नया नाम डालते ही upload से बन जाएगा। “Load Folders” DynamoDB से लिस्ट करता है।</div>
       </div>
 
+      <!-- Link management -->
       <div class="card row">
-        <label class="small">Upload a photo (face visible)</label>
-        <input id="file" class="input" type="file" accept="image/*" />
-        <button id="btnUpload" class="btn">⬆️ Upload & Index</button>
+        <h3 style="margin:0">🔗 Link Management</h3>
+        <label class="small">Existing Link ID (update के लिए)</label>
+        <input id="linkId" class="input" placeholder="e.g. aedd158f19" />
+        <label class="small">Allowed Folders (comma-separated)</label>
+        <input id="allowed" class="input" placeholder="bjpevent,bjpevent-2025-08-15" />
+        <div style="display:flex;gap:12px;align-items:center">
+          <label class="small">Expiry (hours)</label>
+          <input id="hours" class="input" style="max-width:140px" type="number" min="0" value="720" />
+          <label><input type="checkbox" id="permanent" /> Permanent</label>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" id="btnGen">Generate New</button>
+          <button class="btn" id="btnUpdate">Update Existing</button>
+        </div>
+        <div id="linkOut" class="small"></div>
+      </div>
+
+      <!-- Multi upload -->
+      <div class="card row">
+        <h3 style="margin:0">⬆️ Multi Upload (auto-convert to JPEG)</h3>
+        <input id="files" class="input" type="file" accept="image/*" multiple />
+        <button class="btn" id="btnUpload">Upload Selected</button>
+        <div class="small">JPG/PNG/WEBP सहित सभी फॉर्मेट client-side canvas से JPEG में कन्वर्ट होकर सेव होंगे। Duplicate अपने-आप skip होंगे।</div>
+        <progress id="prog" max="100" value="0" style="display:none"></progress>
+        <div id="uploadLog" class="small"></div>
       </div>
     </div>
 
     <div class="card">
-      <h3 style="margin-top:0">Logs</h3>
+      <h3 style="margin:0">📜 Logs</h3>
       <textarea id="log" readonly></textarea>
     </div>
   </div>
 </div>
 
 <script>
-  // ========= CONFIG =========
+  // ====== CONFIG ======
   const API_BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search"; // stage
   const URLS = {
-    health: `${API_BASE}/health`,
-    adminGenerate: `${API_BASE}/generate-link`, // POST
-    adminUpload: `${API_BASE}/upload`          // POST
+    health:        `${API_BASE}/health`,
+    genLink:       `${API_BASE}/generate-link`,
+    updateLink:    `${API_BASE}/update-link`,   // (new endpoint – Lambda patch below)
+    listFolders:   `${API_BASE}/admin/folders`, // (new endpoint – Lambda patch below)
+    upload:        `${API_BASE}/upload`
   };
 
   const $ = s => document.querySelector(s);
-  const log = (obj) => { const t=$("#log"); t.value += (typeof obj==="string"? obj : JSON.stringify(obj)) + "\n"; t.scrollTop = t.scrollHeight; };
+  const log = (obj) => { const t=$("#log"); t.value += (typeof obj==="string"? obj : JSON.stringify(obj)) + "\n"; t.scrollTop=t.scrollHeight; };
+  const setBadge = ok => { $("#api-status").textContent = ok ? "OK" : "error"; };
 
-  function fileToDataUrl(file){
-    return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
+  // Health
+  (async()=>{ try{ const r=await fetch(URLS.health); const j=await r.json(); setBadge(j.ok); }catch{ setBadge(false); } })();
+
+  // Folders UI
+  function setFolders(list){
+    const sel = $("#folder"); sel.innerHTML="";
+    (list||[]).sort().forEach(f=>{
+      const o=document.createElement("option"); o.value=f; o.textContent=f; sel.appendChild(o);
+    });
   }
 
-  async function genLink(){
+  $("#btnAddFolder").addEventListener("click", ()=>{
+    const nf = $("#newFolder").value.trim();
+    if(!nf) return;
+    const cur = Array.from($("#folder").options).map(o=>o.value);
+    if(!cur.includes(nf)) { cur.push(nf); setFolders(cur); $("#folder").value=nf; }
+    $("#newFolder").value="";
+    log(`Folder prepared: ${nf} (upload पर अपने-आप बन जाएगा)`);
+  });
+
+  $("#btnLoadFolders").addEventListener("click", async ()=>{
     const token = $("#token").value.trim();
-    const folderId = $("#folder").value.trim();
-    if(!token){ alert("token required"); return; }
+    if(!token){ alert("Admin token required"); return; }
     try{
-      const r = await fetch(URLS.adminGenerate,{
-        method:"POST",
-        headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
-        body: JSON.stringify({ allowedFolders:[folderId], expiresInHours:48 })
-      });
+      const r = await fetch(URLS.listFolders, { headers:{ "Authorization":`Bearer ${token}` }});
       const j = await r.json();
-      $("#linkId").textContent = j.linkId || "—";
+      setFolders(j.folders || []);
       log(j);
     }catch(e){ log("error: "+e.message); }
+  });
+
+  // Link mgmt
+  function parseAllowed(){
+    const txt = $("#allowed").value.trim();
+    return txt ? txt.split(",").map(s=>s.trim()).filter(Boolean) : [];
+  }
+  function calcHours(){
+    if ($("#permanent").checked) return 24*365*10; // ~10 yrs
+    const h = parseInt($("#hours").value||"0",10);
+    return (isNaN(h) || h<0) ? 0 : h;
   }
 
-  async function upload(){
+  $("#btnGen").addEventListener("click", async ()=>{
     const token = $("#token").value.trim();
-    const folderId = $("#folder").value.trim();
-    const f = $("#file").files[0];
-    if(!token){ alert("token required"); return; }
-    if(!f){ alert("select a photo"); return; }
-    const b64 = await fileToDataUrl(f);
+    const allowedFolders = parseAllowed().length ? parseAllowed() : [ $("#folder").value ];
+    const hours = calcHours();
+    if(!token){ alert("Admin token required"); return; }
     try{
-      const r = await fetch(URLS.adminUpload,{
+      const r = await fetch(URLS.genLink, {
         method:"POST",
         headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
-        body: JSON.stringify({ folderId, imageBase64:b64 })
+        body: JSON.stringify({ allowedFolders, expiresInHours: hours })
       });
       const j = await r.json();
+      $("#linkOut").textContent = j.linkId ? `linkId: ${j.linkId} (expiresAt: ${j.expiresAt||"-"})` : JSON.stringify(j);
+      $("#linkId").value = j.linkId || "";
       log(j);
     }catch(e){ log("error: "+e.message); }
+  });
+
+  $("#btnUpdate").addEventListener("click", async ()=>{
+    const token = $("#token").value.trim();
+    const linkId = $("#linkId").value.trim();
+    if(!token || !linkId){ alert("token + linkId required"); return; }
+    const allowedFolders = parseAllowed();
+    const hours = calcHours();
+    try{
+      const r = await fetch(URLS.updateLink, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
+        body: JSON.stringify({ linkId, allowedFolders, expiresInHours: hours })
+      });
+      const j = await r.json();
+      $("#linkOut").textContent = j.ok ? `Updated: ${linkId}` : JSON.stringify(j);
+      log(j);
+    }catch(e){ log("error: "+e.message); }
+  });
+
+  // Multi upload (auto convert to JPEG)
+  async function fileToJpegDataURL(file){
+    // Read as dataURL
+    const dataUrl = await new Promise((res,rej)=>{
+      const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file);
+    });
+    // Draw to canvas -> JPEG
+    const img = new Image();
+    img.crossOrigin="anonymous";
+    await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; img.src=dataUrl; });
+    const canvas = document.createElement("canvas");
+    const size = Math.min(img.width, img.height);
+    canvas.width = 1024; canvas.height = 1024; // upscale/downscale to reasonable size
+    const ctx = canvas.getContext("2d");
+    const sx = (img.width - size)/2, sy = (img.height - size)/2;
+    ctx.drawImage(img, sx, sy, size, size, 0, 0, 1024, 1024);
+    return canvas.toDataURL("image/jpeg", 0.92);
   }
 
-  $("#btnLink").addEventListener("click", genLink);
-  $("#btnUpload").addEventListener("click", upload);
+  $("#btnUpload").addEventListener("click", async ()=>{
+    const token = $("#token").value.trim();
+    const folderId = $("#folder").value.trim();
+    const files = $("#files").files;
+    if(!token){ alert("Admin token required"); return; }
+    if(!folderId){ alert("Select folder"); return; }
+    if(!files || !files.length){ alert("Select files"); return; }
+
+    $("#prog").style.display="block";
+    $("#prog").value=0;
+    $("#uploadLog").textContent = `0/${files.length}`;
+
+    let done=0;
+    for (const f of files){
+      try{
+        const b64jpeg = await fileToJpegDataURL(f);
+        const resp = await fetch(URLS.upload, {
+          method:"POST",
+          headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
+          body: JSON.stringify({ folderId, imageBase64: b64jpeg })
+        });
+        const j = await resp.json();
+        log({file:f.name, result:j});
+      }catch(e){
+        log({file:f.name, error: String(e)});
+      }
+      done++;
+      $("#prog").value = Math.round(done*100/files.length);
+      $("#uploadLog").textContent = `${done}/${files.length}`;
+    }
+  });
 </script>
 </body>
 </html>
