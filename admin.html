@@ -14,17 +14,15 @@
     .btn{background:var(--brand);color:#001b16;border:0;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
     .input{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #233045;background:#0e1218;color:var(--text)}
     .small{font-size:12px;color:var(--muted)}
-    .badge{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;background:#0e1625;border:1px solid #1d2740;color:var(--muted);font-size:12px}
     @media(min-width:760px){.cols{grid-template-columns:1fr 1fr}}
     textarea{width:100%;min-height:140px;border-radius:12px;border:1px solid #233045;background:#0e1218;color:var(--text);padding:10px}
+    .badge{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;background:#0e1625;border:1px solid #1d2740;color:var(--muted);font-size:12px}
   </style>
 </head>
 <body>
 <div class="wrap">
   <div class="row">
-    <div class="card">
-      <div class="badge">Admin Panel</div>
-    </div>
+    <div class="card"><div class="badge">Admin Panel</div></div>
 
     <div class="row cols">
       <div class="card row">
@@ -51,19 +49,27 @@
 </div>
 
 <script>
-  // ====== CONFIG ======
-  const API_BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search";
-  const ADMIN_BASE = API_BASE.replace(/\/search$/, ""); // /admin endpoints के लिए
+  // ========= CONFIG =========
+  const API_BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search"; // stage
+  const URLS = {
+    health: `${API_BASE}/health`,
+    adminGenerate: `${API_BASE}/generate-link`, // POST
+    adminUpload: `${API_BASE}/upload`          // POST
+  };
 
-  const $ = sel => document.querySelector(sel);
+  const $ = s => document.querySelector(s);
   const log = (obj) => { const t=$("#log"); t.value += (typeof obj==="string"? obj : JSON.stringify(obj)) + "\n"; t.scrollTop = t.scrollHeight; };
+
+  function fileToDataUrl(file){
+    return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
+  }
 
   async function genLink(){
     const token = $("#token").value.trim();
     const folderId = $("#folder").value.trim();
     if(!token){ alert("token required"); return; }
     try{
-      const r = await fetch(`${ADMIN_BASE}/admin/generate-link`,{
+      const r = await fetch(URLS.adminGenerate,{
         method:"POST",
         headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
         body: JSON.stringify({ allowedFolders:[folderId], expiresInHours:48 })
@@ -74,10 +80,6 @@
     }catch(e){ log("error: "+e.message); }
   }
 
-  function fileToDataUrl(file){
-    return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
-  }
-
   async function upload(){
     const token = $("#token").value.trim();
     const folderId = $("#folder").value.trim();
@@ -86,7 +88,7 @@
     if(!f){ alert("select a photo"); return; }
     const b64 = await fileToDataUrl(f);
     try{
-      const r = await fetch(`${ADMIN_BASE}/admin/upload`,{
+      const r = await fetch(URLS.adminUpload,{
         method:"POST",
         headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
         body: JSON.stringify({ folderId, imageBase64:b64 })
