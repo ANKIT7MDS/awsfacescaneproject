@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Face Search</title>
+  <style>
+    :root{--bg:#0b0d10;--card:#12151a;--muted:#97a3b6;--brand:#14b8a6;--text:#edf2f7}
+    *{box-sizing:border-box}
+    html,body{height:100%} body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter}
+    .wrap{max-width:960px;margin:0 auto;padding:16px}
+    .row{display:grid;gap:12px}
+    .card{background:var(--card);border:1px solid #1b2130;border-radius:18px;padding:16px}
+    .btn{background:var(--brand);color:#001b16;border:0;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .input{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #233045;background:#0e1218;color:var(--text)}
+    .small{font-size:12px;color:var(--muted)}
+    .videoBox{display:grid;place-items:center;border-radius:16px;overflow:hidden;border:1px dashed #2a364d;min-height:280px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+    .item{background:#0f1522;border:1px solid #1b2740;border-radius:14px;padding:10px}
+    .top{display:flex;gap:8px;align-items:center}
+    .badge{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;background:#0e1625;border:1px solid #1d2740;color:var(--muted);font-size:12px}
+    @media(min-width:760px){.cols{grid-template-columns:1.2fr .8fr}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="row">
+    <div class="card top">
+      <div class="badge">API: <span id="api-status">checking…</span></div>
+      <div class="badge">Collection: <span id="api-col">—</span></div>
+    </div>
+
+    <div class="row cols">
+      <div class="card row">
+        <div class="videoBox">
+          <video id="v" playsinline muted style="width:100%;max-width:420px"></video>
+        </div>
+        <button id="btnSnap" class="btn" disabled>📸 Take Selfie</button>
+        <canvas id="c" width="512" height="512" style="display:none"></canvas>
+        <div class="small" id="snapMsg">Camera starting…</div>
+      </div>
+
+      <div class="card row">
+        <label class="small">Link ID (optional)</label>
+        <input id="linkId" class="input" placeholder="aedd158f19" />
+        <label class="small">Threshold: <span id="thrVal">80</span></label>
+        <input id="thr" type="range" min="50" max="95" value="80" />
+        <button id="btnSearch" class="btn">🔎 Search</button>
+        <div class="small" id="msg"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Results</h3>
+      <div id="grid" class="grid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ====== CONFIG ======
+  // आपका API base (stage सहित) — पहला /search = stage, दूसरा /search = resource
+  const API_BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search";
+
+  // ====== helpers ======
+  const $ = sel => document.querySelector(sel);
+  const setText = (id, t) => { $(id).textContent = t; };
+
+  // Health
+  async function health(){
+    try{
+      const r = await fetch(`${API_BASE}/health`);
+      const j = await r.json();
+      setText("#api-status", j.ok ? "OK" : "error");
+      setText("#api-col", j.collection || "-");
+    }catch{
+      setText("#api-status","error");
+    }
+  }
+
+  // Camera
+  async function startCam(){
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user" }});
+      const v = $("#v");
+      v.srcObject = stream;
+      await v.play();
+      $("#btnSnap").disabled = false;
+      $("#snapMsg").textContent = "Camera ready ✅";
+    }catch(e){
+      $("#snapMsg").textContent = "Camera permission needed";
+    }
+  }
+
+  // Capture to dataURL (square)
+  function capture(){
+    const v = $("#v"), c = $("#c");
+    const size = Math.min(v.videoWidth || 640, v.videoHeight || 480);
+    c.width = 512; c.height = 512;
+    const ctx = c.getContext("2d");
+    const sx = ((v.videoWidth || 640) - size)/2;
+    const sy = ((v.videoHeight || 480) - size)/2;
+    ctx.drawImage(v, sx, sy, size, size, 0, 0, 512, 512);
+    return c.toDataURL("image/jpeg", 0.92);
+  }
+
+  // Search
+  async function doSearch(){
+    $("#msg").textContent = "Searching…";
+    $("#grid").innerHTML = "";
+    const dataUrl = capture();
+    const linkId = $("#linkId").value.trim();
+    const threshold = +$("#thr").value;
+
+    const body = { imageBase64: dataUrl, threshold, maxResults: 20 };
+    if (linkId) body.linkId = linkId; else body.allowedFolders = ["wedding-x"];
+
+    try{
+      const r = await fetch(`${API_BASE}/search`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const j = await r.json();
+      $("#msg").textContent = `Found: ${j.count || 0}`;
+      renderResults(j.results || []);
+    }catch(e){
+      $("#msg").textContent = "Error: " + e.message;
+    }
+  }
+
+  function renderResults(list){
+    const grid = $("#grid");
+    grid.innerHTML = "";
+    for(const r of list){
+      const el = document.createElement("div");
+      el.className = "item";
+      el.innerHTML = `
+        <div class="small">${r.folderId} · ${r.similarity}%</div>
+        <a class="btn" style="display:inline-block;margin-top:8px" href="${r.downloadUrl}" target="_blank" rel="noreferrer">Download</a>
+      `;
+      grid.appendChild(el);
+    }
+  }
+
+  // UI hookup
+  $("#thr").addEventListener("input", e => setText("#thrVal", e.target.value));
+  $("#btnSnap").addEventListener("click", () => { capture(); $("#snapMsg").textContent = "Selfie captured ✅"; });
+  $("#btnSearch").addEventListener("click", doSearch);
+
+  // init
+  health();
+  startCam();
+</script>
+</body>
+</html>
