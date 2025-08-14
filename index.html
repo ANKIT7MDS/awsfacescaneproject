@@ -18,7 +18,6 @@
     .videoBox{display:grid;place-items:center;border-radius:16px;overflow:hidden;border:1px dashed #2a364d;min-height:280px}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
     .item{background:#0f1522;border:1px solid #1b2740;border-radius:14px;padding:10px}
-    .top{display:flex;gap:8px;align-items:center}
     .badge{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;background:#0e1625;border:1px solid #1d2740;color:var(--muted);font-size:12px}
     @media(min-width:760px){.cols{grid-template-columns:1.2fr .8fr}}
   </style>
@@ -26,7 +25,7 @@
 <body>
 <div class="wrap">
   <div class="row">
-    <div class="card top">
+    <div class="card" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <div class="badge">API: <span id="api-status">checking…</span></div>
       <div class="badge">Collection: <span id="api-col">—</span></div>
     </div>
@@ -42,7 +41,7 @@
       </div>
 
       <div class="card row">
-        <label class="small">Link ID (optional)</label>
+        <label class="small">Optional Link ID (यदि share link दिया हो)</label>
         <input id="linkId" class="input" placeholder="aedd158f19" />
         <label class="small">Threshold: <span id="thrVal">80</span></label>
         <input id="thr" type="range" min="50" max="95" value="80" />
@@ -59,18 +58,22 @@
 </div>
 
 <script>
-  // ====== CONFIG ======
-  // आपका API base (stage सहित) — पहला /search = stage, दूसरा /search = resource
+  // ========= CONFIG =========
+  // Stage तक base रखें (पहला /search = stage)
   const API_BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search";
+  const URLS = {
+    health: `${API_BASE}/health`,
+    search: `${API_BASE}/search` // दूसरा /search = resource
+  };
 
-  // ====== helpers ======
-  const $ = sel => document.querySelector(sel);
-  const setText = (id, t) => { $(id).textContent = t; };
+  // ========= helpers =========
+  const $ = s => document.querySelector(s);
+  const setText = (sel, t) => { $(sel).textContent = t; };
 
   // Health
   async function health(){
     try{
-      const r = await fetch(`${API_BASE}/health`);
+      const r = await fetch(URLS.health);
       const j = await r.json();
       setText("#api-status", j.ok ? "OK" : "error");
       setText("#api-col", j.collection || "-");
@@ -93,22 +96,38 @@
     }
   }
 
-  // Capture to dataURL (square)
+  // Capture to square dataURL
   function capture(){
     const v = $("#v"), c = $("#c");
-    const size = Math.min(v.videoWidth || 640, v.videoHeight || 480);
+    const vw = v.videoWidth || 640, vh = v.videoHeight || 480;
+    const size = Math.min(vw, vh);
     c.width = 512; c.height = 512;
     const ctx = c.getContext("2d");
-    const sx = ((v.videoWidth || 640) - size)/2;
-    const sy = ((v.videoHeight || 480) - size)/2;
+    const sx = (vw - size)/2, sy = (vh - size)/2;
     ctx.drawImage(v, sx, sy, size, size, 0, 0, 512, 512);
     return c.toDataURL("image/jpeg", 0.92);
+  }
+
+  // Render results
+  function renderResults(list){
+    const grid = $("#grid");
+    grid.innerHTML = "";
+    for(const r of list){
+      const el = document.createElement("div");
+      el.className = "item";
+      el.innerHTML = `
+        <div class="small">${r.folderId || "-"} · ${r.similarity ?? "-"}%</div>
+        ${r.downloadUrl ? `<a class="btn" style="display:inline-block;margin-top:8px" href="${r.downloadUrl}" target="_blank" rel="noreferrer">Download</a>` : ""}
+      `;
+      grid.appendChild(el);
+    }
   }
 
   // Search
   async function doSearch(){
     $("#msg").textContent = "Searching…";
     $("#grid").innerHTML = "";
+
     const dataUrl = capture();
     const linkId = $("#linkId").value.trim();
     const threshold = +$("#thr").value;
@@ -117,7 +136,7 @@
     if (linkId) body.linkId = linkId; else body.allowedFolders = ["wedding-x"];
 
     try{
-      const r = await fetch(`${API_BASE}/search`, {
+      const r = await fetch(URLS.search, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
@@ -130,21 +149,7 @@
     }
   }
 
-  function renderResults(list){
-    const grid = $("#grid");
-    grid.innerHTML = "";
-    for(const r of list){
-      const el = document.createElement("div");
-      el.className = "item";
-      el.innerHTML = `
-        <div class="small">${r.folderId} · ${r.similarity}%</div>
-        <a class="btn" style="display:inline-block;margin-top:8px" href="${r.downloadUrl}" target="_blank" rel="noreferrer">Download</a>
-      `;
-      grid.appendChild(el);
-    }
-  }
-
-  // UI hookup
+  // UI hookups
   $("#thr").addEventListener("input", e => setText("#thrVal", e.target.value));
   $("#btnSnap").addEventListener("click", () => { capture(); $("#snapMsg").textContent = "Selfie captured ✅"; });
   $("#btnSearch").addEventListener("click", doSearch);
