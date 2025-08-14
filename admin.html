@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Face Search Admin</title>
+  <style>
+    :root{--bg:#0b0d10;--card:#12151a;--muted:#97a3b6;--brand:#14b8a6;--text:#edf2f7}
+    *{box-sizing:border-box}
+    html,body{height:100%} body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter}
+    .wrap{max-width:960px;margin:0 auto;padding:16px}
+    .row{display:grid;gap:12px}
+    .card{background:var(--card);border:1px solid #1b2130;border-radius:18px;padding:16px}
+    .btn{background:var(--brand);color:#001b16;border:0;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
+    .input{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #233045;background:#0e1218;color:var(--text)}
+    .small{font-size:12px;color:var(--muted)}
+    .badge{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;background:#0e1625;border:1px solid #1d2740;color:var(--muted);font-size:12px}
+    @media(min-width:760px){.cols{grid-template-columns:1fr 1fr}}
+    textarea{width:100%;min-height:140px;border-radius:12px;border:1px solid #233045;background:#0e1218;color:var(--text);padding:10px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="row">
+    <div class="card">
+      <div class="badge">Admin Panel</div>
+    </div>
+
+    <div class="row cols">
+      <div class="card row">
+        <label class="small">Admin Token</label>
+        <input id="token" class="input" placeholder="ChangeMe_Secret_123" />
+        <label class="small">Folder ID</label>
+        <input id="folder" class="input" value="wedding-x" />
+        <button id="btnLink" class="btn">🔗 Generate Link</button>
+        <div class="small">Link ID: <b id="linkId">—</b></div>
+      </div>
+
+      <div class="card row">
+        <label class="small">Upload a photo (face visible)</label>
+        <input id="file" class="input" type="file" accept="image/*" />
+        <button id="btnUpload" class="btn">⬆️ Upload & Index</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Logs</h3>
+      <textarea id="log" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ====== CONFIG ======
+  const API_BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search";
+  const ADMIN_BASE = API_BASE.replace(/\/search$/, ""); // /admin endpoints के लिए
+
+  const $ = sel => document.querySelector(sel);
+  const log = (obj) => { const t=$("#log"); t.value += (typeof obj==="string"? obj : JSON.stringify(obj)) + "\n"; t.scrollTop = t.scrollHeight; };
+
+  async function genLink(){
+    const token = $("#token").value.trim();
+    const folderId = $("#folder").value.trim();
+    if(!token){ alert("token required"); return; }
+    try{
+      const r = await fetch(`${ADMIN_BASE}/admin/generate-link`,{
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
+        body: JSON.stringify({ allowedFolders:[folderId], expiresInHours:48 })
+      });
+      const j = await r.json();
+      $("#linkId").textContent = j.linkId || "—";
+      log(j);
+    }catch(e){ log("error: "+e.message); }
+  }
+
+  function fileToDataUrl(file){
+    return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
+  }
+
+  async function upload(){
+    const token = $("#token").value.trim();
+    const folderId = $("#folder").value.trim();
+    const f = $("#file").files[0];
+    if(!token){ alert("token required"); return; }
+    if(!f){ alert("select a photo"); return; }
+    const b64 = await fileToDataUrl(f);
+    try{
+      const r = await fetch(`${ADMIN_BASE}/admin/upload`,{
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
+        body: JSON.stringify({ folderId, imageBase64:b64 })
+      });
+      const j = await r.json();
+      log(j);
+    }catch(e){ log("error: "+e.message); }
+  }
+
+  $("#btnLink").addEventListener("click", genLink);
+  $("#btnUpload").addEventListener("click", upload);
+</script>
+</body>
+</html>
