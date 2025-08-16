@@ -1,315 +1,334 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Camera, Download, ImagePlus, Loader2, Search } from "lucide-react";
-import JSZip from "jszip";
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>भारतीय जनता पार्टी – मंदसौर | Selfie Search</title>
 
-/**
- * 🔶 Selfie Search – BJP Mandsaur Theme
- * -------------------------------------------------------------
- * - Orange theme, Hindi labels
- * - Name + Mobile inputs (for lead capture – optional)
- * - Camera capture + File select (multiple)
- * - Preview thumbnails (tap/ click to select)
- * - Search by selfie (via POST /search)
- * - Bulk download selected results (zip)
- * - "See more" pagination (client-side)
- * - Mobile-first, responsive, clean
- *
- * HOW TO USE
- * 1) Set BASE and (optionally) LINK_ID below; OR pass through URL as:
- *    https://your-site/?link=379de0d73551
- * 2) If no link is present, we default to folderId="common" for search.
- * 3) Deploy to Netlify.
- */
+  <!-- Tailwind via CDN (no build step needed) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Icons (optional) -->
+  <link href="https://unpkg.com/lucide-static@0.321.0/font/lucide.css" rel="stylesheet">
+  <!-- JSZip for bulk download -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 
-const BASE = import.meta.env.VITE_API_BASE || "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search"; // API Gateway base
-
-export default function SelfieSearchBJP() {
-  // ───────────────────────────────────────────────────────────────────────
-  // URL params & defaults
-  const url = new URL(window.location.href);
-  const LINK_ID = url.searchParams.get("link") || ""; // sharable link id
-  const DEFAULT_FOLDER = "common"; // fallback when link is not provided
-
-  // ───────────────────────────────────────────────────────────────────────
-  // Lead capture (optional)
-  const [name, setName] = useState("");
-  const [mobile, setMobile] = useState("");
-
-  // ───────────────────────────────────────────────────────────────────────
-  // Image selection & camera capture
-  const [files, setFiles] = useState([]); // File[]
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [capturing, setCapturing] = useState(false);
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-
-  const startCamera = async () => {
-    try {
-      setCapturing(true);
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        await videoRef.current.play();
-      }
-    } catch (e) {
-      console.error(e);
-      alert("कैमरा चालू नहीं हो पाया। ब्राउज़र/डिवाइस अनुमति दें।");
-      setCapturing(false);
+  <style>
+    :root{
+      --bjp:#ff6a00;
+      --bjp-dark:#e65f00;
+      --ink:#0f172a;
     }
-  };
+    body{ background:#fff; color:var(--ink);}
+    .brand-bar{ background:linear-gradient(90deg,var(--bjp),#ffa733); color:#fff; }
+    .btn-bjp{ background:var(--bjp); color:#fff;}
+    .btn-bjp:hover{ background:var(--bjp-dark); }
+    .card{ box-shadow: 0 8px 22px rgba(0,0,0,.08); }
+    .thumb{ aspect-ratio:1/1; object-fit:cover; }
+    .grid-auto{ grid-template-columns: repeat(auto-fill,minmax(140px,1fr)); }
+  </style>
+</head>
 
-  const captureFrame = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const file = new File([blob], `selfie_${Date.now()}.jpg`, { type: "image/jpeg" });
-      setFiles((prev) => [file, ...prev]);
-      stopCamera();
-    }, "image/jpeg", 0.92);
-  };
+<body class="min-h-screen flex flex-col">
 
-  const stopCamera = () => {
-    setCapturing(false);
-    if (streamRef.current) {
-      for (const track of streamRef.current.getTracks()) track.stop();
-      streamRef.current = null;
-    }
-  };
+  <!-- Header -->
+  <header class="brand-bar">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center gap-3">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/4/49/Bharatiya_Janata_Party_logo.svg"
+           alt="BJP" class="h-9 w-9 bg-white rounded-full p-1">
+      <div class="flex-1">
+        <h1 class="text-xl font-bold">भारतीय जनता पार्टी – मंदसौर</h1>
+        <p class="text-white/90 text-sm">अपना फोटो खोजें — Selfie Search</p>
+      </div>
+    </div>
+  </header>
 
-  const onPick = (ev) => {
-    const sel = Array.from(ev.target.files || []);
-    if (sel.length) setFiles((prev) => [...sel, ...prev]);
-    ev.target.value = "";
-  };
+  <main class="max-w-6xl mx-auto w-full px-4 py-6 flex-1">
 
-  const removeFile = (idx) => setFiles((prev) => prev.filter((_, i) => i !== idx));
+    <!-- Lead form -->
+    <section class="card rounded-2xl p-4 md:p-6 mb-6">
+      <h2 class="text-lg md:text-xl font-semibold mb-4">लीड फॉर्म (वैकल्पिक)</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <input id="name" type="text" class="border rounded-xl px-4 py-3"
+               placeholder="नाम">
+        <input id="mobile" type="tel" inputmode="numeric" class="border rounded-xl px-4 py-3"
+               placeholder="मोबाइल">
+        <div class="text-sm text-slate-600 flex items-center">*(केवल रजिस्ट्रेशन हेतु)</div>
+      </div>
+    </section>
 
-  // ───────────────────────────────────────────────────────────────────────
-  // Search
-  const [busy, setBusy] = useState(false);
-  const [results, setResults] = useState([]); // API results
-  const [showCount, setShowCount] = useState(12);
+    <!-- Capture / select -->
+    <section class="card rounded-2xl p-4 md:p-6 mb-6">
+      <h2 class="text-lg md:text-xl font-semibold mb-4">फोटो चुने या कैमरा से कैप्चर करें</h2>
 
-  const activeFile = useMemo(() => files[activeIdx], [files, activeIdx]);
-
-  const fileToDataUrl = (file) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-
-  const search = async () => {
-    if (!activeFile) {
-      alert("कृपया एक फोटो चुनें या कैमरा से क्लिक करें।");
-      return;
-    }
-    setBusy(true);
-    try {
-      const dataUrl = await fileToDataUrl(activeFile);
-      const body = {
-        imageBase64: dataUrl,
-        // अगर sharable link है तो backend उसी के allowedFolders यूज़ करेगा; नहीं है तो fallback
-        linkId: LINK_ID || undefined,
-        allowedFolders: LINK_ID ? undefined : [DEFAULT_FOLDER],
-        threshold: 62,
-        maxResults: 100,
-      };
-
-      const r = await fetch(`${BASE}/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) throw new Error(`Search failed ${r.status}`);
-      const json = await r.json();
-      const list = (json.results || []).map((x, i) => ({
-        id: `${x.key}-${i}`,
-        similarity: x.similarity,
-        url: x.downloadUrl || x.url || x.s3 || "",
-        key: x.key,
-        folderId: x.folderId,
-        checked: false,
-      }));
-      setResults(list);
-      setShowCount(12);
-    } catch (e) {
-      console.error(e);
-      alert("सर्च में समस्या आई। बाद में पुनः प्रयास करें।");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const toggleCheck = (id) => setResults((prev) => prev.map((r) => (r.id === id ? { ...r, checked: !r.checked } : r)));
-
-  const visible = useMemo(() => results.slice(0, showCount), [results, showCount]);
-
-  const downloadSelected = async () => {
-    const sel = results.filter((r) => r.checked && r.url);
-    if (!sel.length) return alert("कृपया डाउनलोड के लिए कुछ फोटो चुनें।");
-    const zip = new JSZip();
-    for (const item of sel) {
-      const res = await fetch(item.url);
-      const blob = await res.blob();
-      const fname = item.key?.split("/").pop() || `photo_${Math.random().toString(36).slice(2)}.jpg`;
-      zip.file(fname, blob);
-    }
-    const out = await zip.generateAsync({ type: "blob" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(out);
-    a.download = `selected_${Date.now()}.zip`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-
-  // ───────────────────────────────────────────────────────────────────────
-  // UI
-  return (
-    <div className="min-h-screen bg-orange-50 text-zinc-900">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-orange-600 text-white shadow-md">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/0/0e/Bharatiya_Janata_Party_logo.svg" alt="BJP" className="w-9 h-9"/>
-            <div>
-              <div className="text-lg md:text-2xl font-bold leading-tight">भारतीय जनता पार्टी – मंदसौर</div>
-              <div className="text-xs md:text-sm opacity-90">अपना फोटो खोजें – Selfie Search</div>
-            </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Camera -->
+        <div class="col-span-1 space-y-3">
+          <video id="video" class="w-full rounded-xl border" autoplay playsinline muted></video>
+          <div class="flex gap-3">
+            <button id="btnStart" class="btn-bjp px-4 py-2 rounded-xl">कैमरा चालू करें</button>
+            <button id="btnSnap" class="px-4 py-2 rounded-xl border">कैप्चर करें</button>
+            <button id="btnStop" class="px-4 py-2 rounded-xl border">बंद करें</button>
           </div>
-          <div className="hidden md:flex items-center gap-2">
-            <Button className="bg-white text-orange-600 hover:bg-orange-100">Help</Button>
-          </div>
+          <small class="block text-slate-600">* अगर कैमरा ना मिले, ब्राउज़र/डिवाइस अनुमति दें।</small>
         </div>
-      </header>
 
-      {/* Lead form */}
-      <div className="max-w-6xl mx-auto px-4 mt-4 grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Input value={name} onChange={(e)=>setName(e.target.value)} placeholder="नाम" className="bg-white" />
-        <Input value={mobile} onChange={(e)=>setMobile(e.target.value)} placeholder="मोबाइल" className="bg-white" />
-        <div className="col-span-1 md:col-span-2 text-sm text-zinc-600 flex items-center">(वैकल्पिक) केवल रजिस्ट्रेशन हेतु</div>
+        <!-- File picker -->
+        <div class="col-span-1 space-y-3">
+          <input id="picker" type="file" accept="image/*" multiple
+                 class="w-full border rounded-xl px-4 py-3" />
+          <small class="block text-slate-600">एक या ज़्यादा फोटो चुनें (JPEG/PNG/WebP)</small>
+        </div>
+
+        <!-- Preview list -->
+        <div class="col-span-1">
+          <div class="grid grid-auto gap-3" id="preview"></div>
+        </div>
       </div>
 
-      {/* Capture / Select */}
-      <section className="max-w-6xl mx-auto px-4 mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Left: capture */}
-        <Card className="md:col-span-1">
-          <CardContent className="p-4 space-y-3">
-            <div className="font-semibold">अपना फोटो चुनें</div>
-            {!capturing ? (
-              <div className="flex gap-2">
-                <Button onClick={startCamera} className="bg-orange-600 hover:bg-orange-700"><Camera className="mr-2 h-4 w-4"/> कैमरा चालू करें</Button>
-                <label className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-2 rounded-xl cursor-pointer hover:bg-orange-200">
-                  <ImagePlus className="h-4 w-4"/> गैलरी से चुनें
-                  <input type="file" accept="image/*" className="hidden" multiple onChange={onPick}/>
-                </label>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <video ref={videoRef} className="w-full rounded-xl" playsInline muted></video>
-                <div className="flex gap-2">
-                  <Button onClick={captureFrame} className="bg-orange-600 hover:bg-orange-700"><Camera className="mr-2 h-4 w-4"/> क्लिक करें</Button>
-                  <Button variant="secondary" onClick={stopCamera}>रोकें</Button>
-                </div>
-              </div>
-            )}
+      <div class="mt-4 flex items-center gap-3">
+        <button id="btnSearch" class="btn-bjp px-5 py-3 rounded-xl text-base">सर्च करें</button>
+        <span id="busy" class="text-sm text-slate-600 hidden">सर्च हो रहा है…</span>
+      </div>
+    </section>
 
-            <div className="text-xs text-zinc-500">Tip: बेहतर परिणाम के लिए चेहरा साफ़ दिखे ऐसा फोटो लें।</div>
-          </CardContent>
-        </Card>
-
-        {/* Middle: selected list */}
-        <Card className="md:col-span-1">
-          <CardContent className="p-4 space-y-3">
-            <div className="font-semibold">चुने गए फोटो</div>
-            <div className="grid grid-cols-4 gap-2">
-              {files.map((f, i) => (
-                <button key={i} onClick={() => setActiveIdx(i)} className={`relative group rounded-xl overflow-hidden border ${activeIdx===i?"ring-2 ring-orange-500":""}`}>
-                  <img src={URL.createObjectURL(f)} className="w-full h-20 object-cover" />
-                  <span className="absolute top-1 right-1 text-[10px] bg-black/60 text-white px-1 rounded">{i+1}</span>
-                </button>
-              ))}
-              {!files.length && <div className="text-xs text-zinc-500">अभी तक कोई फोटो नहीं चुना।</div>}
-            </div>
-            {files.length>0 && (
-              <div className="flex items-center gap-2">
-                <Button onClick={() => removeFile(activeIdx)} variant="secondary">हटाएँ</Button>
-                <Button onClick={search} className="bg-orange-600 hover:bg-orange-700" disabled={busy}>
-                  {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4"/>}
-                  सर्च करें
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Right: active preview */}
-        <Card className="md:col-span-1">
-          <CardContent className="p-4 space-y-3">
-            <div className="font-semibold">प्रीव्यू</div>
-            {activeFile ? (
-              <img src={URL.createObjectURL(activeFile)} alt="preview" className="w-full rounded-xl" />
-            ) : (
-              <div className="text-sm text-zinc-500">कोई फोटो चुना नहीं है।</div>
-            )}
-            {LINK_ID ? (
-              <div className="text-xs text-zinc-500">Link: <span className="font-mono">{LINK_ID}</span></div>
-            ) : (
-              <div className="text-xs text-zinc-500">Folder: <span className="font-mono">{DEFAULT_FOLDER}</span> (डिफ़ॉल्ट)</div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* Results */}
-      <section className="max-w-6xl mx-auto px-4 mt-6">
-        <div className="flex items-center justify-between mb-2">
-          <div className="font-semibold">रिज़ल्ट</div>
-          <div className="flex gap-2">
-            <Button onClick={downloadSelected} variant="outline"><Download className="mr-2 h-4 w-4"/>चुने हुए डाउनलोड</Button>
-          </div>
+    <!-- Results -->
+    <section class="card rounded-2xl p-4 md:p-6 mb-28">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <h2 class="text-lg md:text-xl font-semibold">रिज़ल्ट</h2>
+        <div class="flex items-center gap-3">
+          <button id="btnMore" class="px-4 py-2 rounded-xl border">और दिखाएँ</button>
+          <button id="btnZip" class="px-4 py-2 rounded-xl border">Bulk ZIP Download</button>
         </div>
-        {results.length === 0 ? (
-          <div className="text-sm text-zinc-500">रिज़ल्ट यहाँ दिखेंगे…</div>
-        ) : (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {visible.map((r) => (
-                <label key={r.id} className="group cursor-pointer">
-                  <input type="checkbox" className="hidden" checked={r.checked} onChange={() => toggleCheck(r.id)} />
-                  <div className={`rounded-xl overflow-hidden border bg-white shadow-sm group-hover:shadow ${r.checked?"ring-2 ring-orange-500":""}`}>
-                    <img src={r.url} className="w-full h-32 object-cover"/>
-                    <div className="p-2 text-xs flex items-center justify-between">
-                      <span className="font-mono">{Math.round(r.similarity)}%</span>
-                      <span className="truncate max-w-[90px]" title={r.key}>{r.key?.split("/").pop()}</span>
-                    </div>
-                  </div>
-                </label>
-              ))}
-            </div>
-            {showCount < results.length && (
-              <div className="flex justify-center mt-4">
-                <Button onClick={()=>setShowCount((c)=>c+12)} variant="secondary">और दिखाएँ</Button>
-              </div>
-            )}
-          </>
-        )}
-      </section>
+      </div>
+      <div class="grid grid-auto gap-3" id="results"></div>
+      <p id="noResults" class="hidden text-slate-600">कोई मिलान नहीं मिला।</p>
+    </section>
 
-      {/* Footer */}
-      <footer className="mt-10 py-6 text-center text-xs text-zinc-500">
-        © {new Date().getFullYear()} BJP Mandsaur • Powered by AWS Rekognition • UI by Team
-      </footer>
-    </div>
-  );
+  </main>
+
+  <footer class="text-center text-sm text-slate-500 p-4">
+    © Selfie Search – BJP Mandsaur
+  </footer>
+
+
+<script>
+/* ========== CONFIG ==========
+   API Gateway base (आपके पास यही है)  */
+const BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search";
+/* URL में ?link=... हो तो वही लिंक-आइडी, नहीं तो common */
+const url = new URL(window.location.href);
+const LINK_ID = url.searchParams.get("link") || "";
+const DEFAULT_FOLDER = "common";
+/* ========== STATE ========== */
+let files = [];            // File objects or captured blobs
+let activeIdx = -1;        // कौन सा प्रीव्यू active है
+let stream = null;         // कैमरा स्ट्रीम
+let showCount = 12;        // client-side pagination
+let resultsList = [];      // last results (array)
+
+/* ========= DOM ========= */
+const videoEl   = document.getElementById("video");
+const btnStart  = document.getElementById("btnStart");
+const btnStop   = document.getElementById("btnStop");
+const btnSnap   = document.getElementById("btnSnap");
+const picker    = document.getElementById("picker");
+const preview   = document.getElementById("preview");
+const btnSearch = document.getElementById("btnSearch");
+const busy      = document.getElementById("busy");
+const resGrid   = document.getElementById("results");
+const noRes     = document.getElementById("noResults");
+const btnMore   = document.getElementById("btnMore");
+const btnZip    = document.getElementById("btnZip");
+
+/* ========= Helpers ========= */
+function toast(msg){ alert(msg); }
+
+function addFile(obj){ // File or Blob
+  files.push(obj);
+  activeIdx = files.length - 1;
+  renderPreview();
 }
+
+function renderPreview(){
+  preview.innerHTML = "";
+  files.forEach((f, idx)=>{
+    const url = URL.createObjectURL(f);
+    const card = document.createElement("div");
+    card.className = "border rounded-xl overflow-hidden";
+    card.innerHTML = `
+      <img src="${url}" class="thumb w-full block ${idx===activeIdx?'ring-4 ring-[--bjp]':''}">
+      <div class="p-2 flex items-center justify-between">
+        <input type="radio" name="sel" ${idx===activeIdx?'checked':''} />
+        <button class="text-xs text-red-600">हटाएँ</button>
+      </div>
+    `;
+    const [radio, del] = card.querySelectorAll("input,button");
+    radio.addEventListener("change",()=>{ activeIdx = idx; renderPreview(); });
+    del.addEventListener("click",()=>{
+      files.splice(idx,1);
+      if(activeIdx>=files.length) activeIdx = files.length-1;
+      renderPreview();
+    });
+    preview.appendChild(card);
+    URL.revokeObjectURL(url);
+  });
+}
+
+function blobToDataURL(blob){
+  return new Promise((resolve,reject)=>{
+    const fr = new FileReader();
+    fr.onload = ()=> resolve(fr.result);
+    fr.onerror = reject;
+    fr.readAsDataURL(blob);
+  });
+}
+
+/* ========= Camera actions ========= */
+btnStart.addEventListener("click", async ()=>{
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user" }, audio:false });
+    videoEl.srcObject = stream;
+  }catch(e){
+    toast("कैमरा चालू नहीं हो पाया। अनुमति दें/दूसरा ब्राउज़र आज़माएँ।");
+  }
+});
+
+btnStop.addEventListener("click", ()=>{
+  if(!stream) return;
+  stream.getTracks().forEach(t=>t.stop());
+  stream = null;
+  videoEl.srcObject = null;
+});
+
+btnSnap.addEventListener("click", async ()=>{
+  if(!stream){ toast("पहले कैमरा चालू करें"); return; }
+  const v = videoEl;
+  const canvas = document.createElement("canvas");
+  canvas.width = v.videoWidth; canvas.height = v.videoHeight;
+  canvas.getContext("2d").drawImage(v,0,0);
+  const blob = await new Promise(r=>canvas.toBlob(r,"image/jpeg",0.92));
+  addFile(blob);
+});
+
+/* ========= File picker ========= */
+picker.addEventListener("change", (e)=>{
+  const arr = Array.from(e.target.files||[]);
+  arr.forEach(f=>addFile(f));
+  e.target.value = "";
+});
+
+/* ========= Search ========= */
+async function doSearch(){
+  if(activeIdx<0){ toast("कृपया कोई फोटो चुनें/कैप्चर करें"); return; }
+  busy.classList.remove("hidden");
+  noRes.classList.add("hidden");
+  resGrid.innerHTML = "";
+  resultsList = [];
+  showCount = 12;
+
+  try{
+    const file = files[activeIdx];
+    const dataUrl = await blobToDataURL(file); // "data:image/jpeg;base64,..."
+    const body = {
+      imageBase64: dataUrl,
+      threshold: 62,
+      maxResults: 100
+    };
+    if(LINK_ID){
+      body.linkId = LINK_ID;
+    }else{
+      body.allowedFolders = [DEFAULT_FOLDER];
+    }
+
+    const r = await fetch(BASE+"/search",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(body)
+    });
+    if(!r.ok){ const t = await r.text(); throw new Error(t||("HTTP "+r.status));}
+    const json = await r.json();
+    resultsList = (json.results||[]);
+    renderResults(true);
+  }catch(e){
+    console.error(e);
+    toast("सर्च में समस्या आई। बाद में पुनः प्रयास करें।");
+  }finally{
+    busy.classList.add("hidden");
+  }
+}
+
+function renderResults(reset=false){
+  if(reset) resGrid.innerHTML="";
+  if(resultsList.length===0){ noRes.classList.remove("hidden"); return;}
+  noRes.classList.add("hidden");
+
+  const slice = resultsList.slice(0, showCount);
+  resGrid.innerHTML = "";
+  slice.forEach((x, i)=>{
+    const card = document.createElement("div");
+    card.className = "border rounded-xl overflow-hidden";
+    const s = Math.round(x.similarity||0);
+    // try best preview (downloadUrl signed link from API)
+    const img = x.downloadUrl || x.previewUrl || "";
+    card.innerHTML = `
+      <img src="${img}" class="thumb w-full block" referrerpolicy="no-referrer">
+      <div class="p-2 space-y-1">
+        <div class="text-sm font-medium">${x.key||"image"}</div>
+        <div class="text-xs text-slate-600">similarity: <b>${s}%</b></div>
+        <label class="text-xs flex items-center gap-2">
+          <input type="checkbox" class="dl" />
+          डाउनलोड के लिए चुनें
+        </label>
+        <a href="${img}" download class="text-[--bjp] text-sm">डाउनलोड</a>
+      </div>
+    `;
+    resGrid.appendChild(card);
+  });
+
+  // hide/show "more"
+  btnMore.classList.toggle("hidden", showCount>=resultsList.length);
+}
+
+btnSearch.addEventListener("click", doSearch);
+btnMore.addEventListener("click", ()=>{
+  showCount += 12;
+  renderResults();
+});
+
+/* ========= Bulk ZIP ========= */
+btnZip.addEventListener("click", async ()=>{
+  const checks = resGrid.querySelectorAll(".dl");
+  const pick = [];
+  let idx=0;
+  for(const c of checks){
+    if(c.checked){
+      // same index order
+      const item = resultsList[idx];
+      if(item && item.downloadUrl) pick.push(item.downloadUrl);
+    }
+    idx++;
+  }
+  if(pick.length===0){ toast("कृपया कुछ फोटो चुनें"); return; }
+
+  try{
+    const zip = new JSZip();
+    let k=1;
+    for(const url of pick){
+      const r = await fetch(url,{cache:"no-store"});
+      const blob = await r.blob();
+      const ext = (blob.type.split("/")[1]||"jpg").replace("+xml","");
+      const name = `photo_${String(k).padStart(3,"0")}.${ext}`;
+      zip.file(name, blob);
+      k++;
+    }
+    const z = await zip.generateAsync({type:"blob"});
+    saveAs(z, `selected_${new Date().toISOString().slice(0,10)}.zip`);
+  }catch(e){
+    console.error(e); toast("ZIP बनाते समय समस्या आई।");
+  }
+});
+</script>
+
+</body>
+</html>
