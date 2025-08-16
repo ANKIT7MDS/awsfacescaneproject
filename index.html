@@ -130,6 +130,23 @@
     </div>
 
   </div>
+<!-- ============ CONFIG (इसे main script से पहले रखें) ============ -->
+<script>
+  window.API = {
+    // 1) आपका API Gateway base (यही वो BASE है जिसकी कमी से error आ रहा है)
+    BASE: "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search",
+
+    // 2) Permanent folder linkId (admin से generate-link या आपका नया common का linkId)
+    LINK_ID: "9bae11f739e3",   // आपका नया common folder
+
+    // 3) डिफ़ॉल्ट फोल्डर (जब LINK_ID खाली हो)
+    DEFAULT_FOLDER: "common",
+
+    // 4) सर्च defaults
+    THRESHOLD: 60,
+    MAX_RESULTS: 50
+  };
+</script>
 
   <!-- ============ MAIN SCRIPT ============ -->
   <script>
