@@ -115,9 +115,12 @@
 
   <script>
     /* ====== CONFIG ====== */
-    const BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search";
-    const DEFAULT_FOLDER = "common";           // आपका डिफ़ॉल्ट साझा फोल्डर
-    const LINK_ID = new URLSearchParams(location.search).get("link") || ""; // sharable link से
+  // यहां अपना permanent linkId डालें:
+const FORCED_COMMON_LINK = "YOUR_PERMANENT_LINK_ID_HERE";  // ← इसे भरें
+
+const LINK_ID = new URLSearchParams(location.search).get("link") || FORCED_COMMON_LINK;
+const DEFAULT_FOLDER = "common";
+
 
     /* ====== DOM ====== */
     const video = document.getElementById("video");
