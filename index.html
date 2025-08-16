@@ -1,321 +1,320 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="hi">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>भारतीय जनता पार्टी – मंदसौर | Selfie Search</title>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>भारतीय जनता पार्टी – मंदसौर | Selfie Search</title>
 
-  <!-- Tailwind (CDN) – सरल व तेज सेटअप के लिए -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- JSZip for bulk zip download -->
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <!-- Tailwind (CDN) — Netlify पर ठीक है; चाहें तो PostCSS build में शिफ्ट कर लें -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-  <style>
-    .card { @apply bg-white rounded-xl shadow-md p-4; }
-    .btn  { @apply bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded; }
-    .btn-outline { @apply border border-orange-600 text-orange-600 hover:bg-orange-50 font-semibold py-2 px-4 rounded; }
-    .input { @apply w-full px-3 py-2 rounded border outline-none focus:ring-2 focus:ring-orange-400; }
-    .badge { @apply text-xs px-2 py-1 rounded bg-orange-100 text-orange-700; }
-  </style>
-</head>
+    <!-- React + ReactDOM (CDN) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-<body class="bg-gray-50 text-gray-800">
-  <!-- Header -->
-  <header class="bg-white sticky top-0 z-10 shadow">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/5/5b/BJP_election_symbol.png" alt="BJP" class="w-8 h-8">
-        <div class="font-bold text-lg sm:text-xl">भारतीय जनता पार्टी – मंदसौर</div>
-      </div>
-      <div class="hidden md:flex gap-2 items-center">
-        <span class="badge">Selfie Search</span>
-      </div>
-    </div>
-  </header>
+    <!-- JSZip for bulk download -->
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
-  <main class="max-w-6xl mx-auto px-4 py-6">
-    <!-- Lead / contact row -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 card">
-      <input id="name" class="input" placeholder="आपका नाम" />
-      <input id="mobile" class="input" placeholder="मोबाइल" inputmode="numeric" />
-      <div class="text-xs text-gray-500 md:text-right flex items-center">* केवल रजिस्ट्रेशन हेतु</div>
-    </div>
-
-    <!-- Capture / Upload -->
-    <section class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Left: camera + file select -->
-      <div class="card">
-        <h2 class="font-semibold mb-3 text-lg">फोटो चुनें या कैमरा से कैप्चर करें</h2>
-
-        <!-- live video -->
-        <div class="relative w-full bg-black rounded-md overflow-hidden">
-          <video id="video" class="w-full h-[280px] object-cover" autoplay playsinline muted></video>
-          <!-- preview canvas hidden (used only for capture) -->
-          <canvas id="canvas" class="hidden"></canvas>
-        </div>
-
-        <!-- buttons -->
-        <div class="mt-3 flex flex-wrap gap-2">
-          <button id="btnStartCam" class="btn">कैमरा चालू करें</button>
-          <button id="btnCapture"  class="btn-outline">कैप्चर करें</button>
-          <button id="btnStopCam"  class="btn-outline">बंद करें</button>
-        </div>
-
-        <!-- multi file -->
-        <div class="mt-4">
-          <div class="text-sm mb-1">एक या ज़्यादा फोटो चुनें (JPEG/PNG/WebP)</div>
-          <input id="fileInput" type="file" accept="image/*" multiple class="block" />
-        </div>
-
-        <!-- info -->
-        <p class="mt-3 text-xs text-gray-500">
-          * अगर कैमरा ना मिले, ब्राउज़र/डिवाइस अनुमति दें।
-        </p>
-      </div>
-
-      <!-- Right: selected previews -->
-      <div class="card">
-        <h2 class="font-semibold mb-3 text-lg">चुने गए फोटो (क्लिक से फोकस)</h2>
-        <div id="previewList" class="grid grid-cols-3 sm:grid-cols-4 gap-3 min-h-[140px]"></div>
-
-        <div class="mt-4 flex flex-wrap gap-2">
-          <button id="btnSearch" class="btn">सर्च करें</button>
-          <button id="btnClear"  class="btn-outline">हटाएँ</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Results -->
-    <section class="mt-6 card">
-      <div class="flex items-center justify-between">
-        <h2 class="font-semibold text-lg">रिज़ल्ट</h2>
-
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    </style>
+  </head>
+  <body class="bg-white text-slate-900">
+    <!-- Header -->
+    <header class="border-b bg-white sticky top-0 z-20">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
         <div class="flex items-center gap-3">
-          <!-- link token / default folder -->
-          <div class="text-xs text-gray-500">
-            <span class="hidden sm:inline">Folder: </span>
-            <code id="folderInfo" class="px-2 py-1 rounded bg-gray-100 text-gray-700"></code>
-          </div>
-
-          <button id="btnSeeMore" class="btn-outline">और दिखाएँ</button>
-          <button id="btnZip" class="btn">Bulk ZIP Download</button>
+          <img src="https://upload.wikimedia.org/wikipedia/commons/6/6e/Bharatiya_Janata_Party_logo.svg"
+               alt="BJP" class="h-6 w-6" />
+          <h1 class="text-lg md:text-xl font-semibold">भारतीय जनता पार्टी – मंदसौर</h1>
         </div>
+        <div class="text-sm text-slate-600">Selfie Search</div>
       </div>
+    </header>
 
-      <div id="results" class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"></div>
-    </section>
-  </main>
+    <!-- App root -->
+    <main id="root" class="max-w-7xl mx-auto px-4 py-6"></main>
 
-  <footer class="text-center text-xs text-gray-500 py-6">
-    © Selfie Search – Mandsaur | Made for field use
-  </footer>
+    <script type="text/javascript">
+      const { useState, useRef } = React;
 
-<script>
-  // ---------- CONFIG ----------
-  const BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search"; // आपका API Gateway base
-  // URL से token ?link=TOKEN  या default 'common' folder
-  const url = new URL(window.location.href);
-  const LINK_PARAM = url.searchParams.get("link") || "";
-  const DEFAULT_FOLDER = "common";
+      // ====== CONFIG ======
+      const BASE =
+        (typeof import !== "undefined" && import.meta && import.meta.env && import.meta.env.VITE_API_BASE) ||
+        "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search";
+      const DEFAULT_FOLDER = "common";
 
-  // तय करें हम token यूज़ कर रहे हैं या default folder
-  const isToken = (s) => /^[a-z0-9]{8,20}$/i.test(s || "");
-  const activeFolderOrToken = isToken(LINK_PARAM) ? LINK_PARAM : DEFAULT_FOLDER;
+      function App() {
+        // lead form (वैकल्पिक)
+        const [name, setName] = useState("");
+        const [mobile, setMobile] = useState("");
 
-  // छोटे helpers
-  const $ = (id) => document.getElementById(id);
-  const toast = (msg) => alert(msg);
+        // single image state
+        const [file, setFile] = useState(null);
+        const [busy, setBusy] = useState(false);
 
-  // UI refs
-  const video   = $("video");
-  const canvas  = $("canvas");
-  const fileInp = $("fileInput");
-  const previewList = $("previewList");
-  const results = $("results");
-  const folderInfo = $("folderInfo");
+        // results
+        const [results, setResults] = useState([]);
+        const [showCount, setShowCount] = useState(24);
 
-  folderInfo.textContent = isToken(LINK_PARAM) ? `link:${LINK_PARAM}` : DEFAULT_FOLDER;
+        // camera refs
+        const videoRef = useRef(null);
+        const streamRef = useRef(null);
 
-  // selected files state
-  let selected = []; // {file, previewUrl}
+        // linkId (अगर sharable link से आये)
+        const params = new URLSearchParams(location.search);
+        const LINK_ID = params.get("link") || "";
 
-  // Camera
-  let stream = null;
-  const startCamera = async () => {
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false});
-      video.srcObject = stream;
-    } catch (e) {
-      console.error(e);
-      toast("कैमरा चालू नहीं हो पाया। ब्राउज़र/डिवाइस अनुमति दें।");
-    }
-  };
-  const stopCamera = () => {
-    if (!stream) return;
-    stream.getTracks().forEach(t => t.stop());
-    stream = null;
-    video.srcObject = null;
-  };
-  const capture = async () => {
-    if (!stream) return toast("पहले कैमरा चालू करें।");
-    canvas.width  = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const blob  = await new Promise(res => canvas.toBlob(res, "image/jpeg", 0.92));
-    const file  = new File([blob], `selfie_${Date.now()}.jpg`, { type: "image/jpeg" });
-    addFiles([file]);
-  };
+        // ----- Camera -----
+        const startCamera = async () => {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            streamRef.current = stream;
+            if (videoRef.current) videoRef.current.srcObject = stream;
+          } catch (err) {
+            console.error(err);
+            alert("कैमरा चालू नहीं हो पाया। कृपया ब्राउज़र/डिवाइस अनुमति दें।");
+          }
+        };
+        const stopCamera = () => {
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+          }
+        };
+        const captureFrame = () => {
+          if (!videoRef.current) return;
+          const video = videoRef.current;
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth || 720;
+          canvas.height = video.videoHeight || 720;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => {
+            if (!blob) return alert("कैप्चर नहीं हो पाया।");
+            const f = new File([blob], `selfie_${Date.now()}.jpg`, { type: "image/jpeg" });
+            setFile(f); // single active file
+          }, "image/jpeg", 0.92);
+        };
 
-  // Add file(s) to selection with preview
-  const addFiles = (files) => {
-    const list = Array.from(files).map(file => ({
-      file,
-      previewUrl: URL.createObjectURL(file)
-    }));
-    selected = [...selected, ...list];
-    renderPreviews();
-  };
-  const removeAt = (idx) => {
-    const it = selected[idx];
-    if (it?.previewUrl) URL.revokeObjectURL(it.previewUrl);
-    selected.splice(idx, 1);
-    renderPreviews();
-  };
-  const clearAll = () => {
-    selected.forEach(it => it.previewUrl && URL.revokeObjectURL(it.previewUrl));
-    selected = [];
-    renderPreviews();
-  };
+        // Files से latest को active रखें
+        const onFileChange = (ev) => {
+          const f = ev.target.files && ev.target.files[0];
+          if (!f) return;
+          setFile(f);
+        };
 
-  const renderPreviews = () => {
-    previewList.innerHTML = "";
-    if (!selected.length) {
-      previewList.innerHTML = `<div class="text-xs text-gray-500 col-span-full">कोई फोटो चयनित नहीं</div>`;
-      return;
-    }
-    selected.forEach((it, i) => {
-      const div = document.createElement("div");
-      div.className = "relative group";
-      div.innerHTML = `
-        <img src="${it.previewUrl}" class="w-full h-28 object-cover rounded-md border" />
-        <button title="हटाएँ" class="absolute top-1 right-1 bg-white/90 text-red-600 text-xs px-2 py-0.5 rounded border hidden group-hover:block">हटाएँ</button>
-      `;
-      div.querySelector("button").onclick = () => removeAt(i);
-      previewList.appendChild(div);
-    });
-  };
+        // helper : file -> dataURL
+        const fileToDataUrl = (f) =>
+          new Promise((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = () => resolve(r.result);
+            r.onerror = reject;
+            r.readAsDataURL(f);
+          });
 
-  // File input
-  fileInp.addEventListener("change", (ev) => addFiles(ev.target.files));
+        // ----- SEARCH -----
+        const search = async () => {
+          if (!file) return alert("कृपया पहले एक फोटो चुनें/कैप्चर करें।");
+          try {
+            setBusy(true);
+            setResults([]);
+            setShowCount(24);
 
-  // Buttons
-  $("btnStartCam").onclick = startCamera;
-  $("btnStopCam").onclick  = stopCamera;
-  $("btnCapture").onclick  = capture;
-  $("btnClear").onclick    = clearAll;
+            const dataUrl = await fileToDataUrl(file);
 
-  // Convert a file to base64 data URL
-  const fileToDataUrl = (file) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+            // यदि sharable `link` query param है तो वही rules लागू; वरना default folder
+            const body = {
+              imageBase64: dataUrl,
+              linkId: LINK_ID || undefined,
+              allowedFolders: LINK_ID ? undefined : [DEFAULT_FOLDER],
+              threshold: 65,
+              maxResults: 200
+            };
 
-  // --- SEARCH ---
-  let showCount = 12;       // first page items
-  let lastPayload = null;   // remember last search results for "see more"
-  const threshold = 65;
-  const maxResults = 100;
+            const res = await fetch(`${BASE}/search`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+            const json = await res.json();
+            setResults(json?.results || []);
+          } catch (e) {
+            console.error(e);
+            alert("सर्च करते समय समस्या हुई।");
+          } finally {
+            setBusy(false);
+          }
+        };
 
-  const makeSearchBody = (imageBase64) => {
-    if (isToken(LINK_PARAM)) {
-      return { imageBase64, linkId: activeFolderOrToken, threshold, maxResults };
-    } else {
-      return { imageBase64, allowedFolders: [activeFolderOrToken], threshold, maxResults };
-    }
-  };
+        // Bulk ZIP download
+        const bulkZip = async () => {
+          if (!results.length) return alert("डाउनलोड करने के लिए रिज़ल्ट नहीं हैं।");
+          const zip = new JSZip();
 
-  const doSearch = async () => {
-    if (!selected.length) return toast("पहले फोटो चुनें/कैप्चर करें।");
-    results.innerHTML = `<div class="text-sm text-gray-500">सर्च हो रहा है...</div>`;
-    const out = [];
+          // बहुत ज़्यादा बड़ी ZIP न बनायें; जरुरत हो तो सीमित रखें
+          const toZip = results.slice(0, 200);
 
-    for (const it of selected) {
-      const dataUrl = await fileToDataUrl(it.file);
-      const body = makeSearchBody(dataUrl);
+          for (let i = 0; i < toZip.length; i++) {
+            const r = toZip[i];
+            try {
+              const resp = await fetch(r.downloadUrl);
+              const blob = await resp.blob();
+              const name = `${String(i + 1).padStart(3, "0")}_${(r.similarity || 0).toFixed(0)}.jpg`;
+              zip.file(name, blob);
+            } catch (e) {
+              console.warn("skip:", r.downloadUrl, e);
+            }
+          }
+          const out = await zip.generateAsync({ type: "blob" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(out);
+          a.download = `results_${Date.now()}.zip`;
+          a.click();
+          URL.revokeObjectURL(a.href);
+        };
 
-      const res = await fetch(`${BASE}/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) {
-        const err = await res.text().catch(()=> "");
-        console.error("Search error", res.status, err);
-        continue;
+        return (
+          React.createElement("div", { className: "space-y-6" },
+
+            // Lead form (optional)
+            React.createElement("section", { className: "grid grid-cols-1 md:grid-cols-3 gap-3 items-center" }, [
+              React.createElement("input", {
+                key: "name",
+                type: "text",
+                value: name,
+                onChange: (e) => setName(e.target.value),
+                placeholder: "आपका नाम",
+                className: "border rounded px-3 py-2 w-full"
+              }),
+              React.createElement("input", {
+                key: "mobile",
+                type: "tel",
+                value: mobile,
+                onChange: (e) => setMobile(e.target.value),
+                placeholder: "मोबाइल",
+                className: "border rounded px-3 py-2 w-full"
+              }),
+              React.createElement("div", { key: "note", className: "text-sm text-slate-500" }, " * केवल रजिस्ट्रेशन हेतु ")
+            ]),
+
+            // Camera + File + Single Preview
+            React.createElement("section", { className: "grid grid-cols-1 md:grid-cols-2 gap-8" }, [
+              // Left: Camera + inputs
+              React.createElement("div", { key: "left" }, [
+                React.createElement("h2", { className: "text-xl font-semibold mb-4" }, "फोटो चुनें या कैमरा से कैप्चर करें"),
+
+                React.createElement("div", { className: "rounded-lg overflow-hidden bg-black aspect-video mb-3" },
+                  React.createElement("video", {
+                    ref: videoRef, autoPlay: true, playsInline: true, muted: true,
+                    className: "w-full h-full object-cover"
+                  })
+                ),
+
+                React.createElement("div", { className: "flex items-center gap-3 mb-6" }, [
+                  React.createElement("button", {
+                    key: "c1",
+                    onClick: startCamera,
+                    className: "px-3 py-1.5 rounded bg-orange-600 text-white"
+                  }, "कैमरा चालू करें"),
+                  React.createElement("button", {
+                    key: "c2",
+                    onClick: captureFrame,
+                    className: "px-3 py-1.5 rounded bg-slate-700 text-white"
+                  }, "कैप्चर करें"),
+                  React.createElement("button", {
+                    key: "c3",
+                    onClick: stopCamera,
+                    className: "px-3 py-1.5 rounded bg-slate-500 text-white"
+                  }, "बंद करें")
+                ]),
+
+                React.createElement("div", { className: "mb-2" }, "एक फोटो चुनें (JPEG/PNG/WebP)"),
+                React.createElement("input", {
+                  type: "file", accept: "image/*", onChange: onFileChange, className: "block"
+                }),
+                React.createElement("div", { className: "text-slate-500 text-sm mt-2" },
+                  " * अगर कैमरा ना मिले, ब्राउज़र/डिवाइस अनुमति दें।")
+              ]),
+
+              // Right: Single Preview + actions
+              React.createElement("div", { key: "right" }, [
+                React.createElement("h2", { className: "text-xl font-semibold mb-4" }, "चुना गया फोटो (latest)"),
+                React.createElement("div", { className: "min-h-[120px]" },
+                  file
+                    ? React.createElement("img", {
+                        src: URL.createObjectURL(file),
+                        alt: "selected",
+                        className: "rounded shadow max-w-[240px] border"
+                      })
+                    : React.createElement("div", { className: "text-slate-500" }, "अभी कोई फोटो चयनित नहीं है")
+                ),
+                React.createElement("div", { className: "flex items-center gap-3 mt-4" }, [
+                  React.createElement("button", {
+                    key: "s1",
+                    disabled: !file || busy,
+                    onClick: search,
+                    className: "px-3 py-1.5 rounded bg-orange-600 text-white disabled:opacity-60"
+                  }, busy ? "सर्च हो रहा है…" : "सर्च करें"),
+                  file && React.createElement("button", {
+                    key: "s2",
+                    onClick: () => setFile(null),
+                    className: "px-3 py-1.5 rounded bg-slate-500 text-white"
+                  }, "हटाएँ")
+                ]),
+                React.createElement("div", { className: "text-sm text-slate-500 mt-6" },
+                  "Folder: ", React.createElement("span", { className: "px-2 py-0.5 rounded bg-slate-100" }, DEFAULT_FOLDER))
+              ])
+            ]),
+
+            // Results
+            React.createElement("section", null, [
+              React.createElement("h3", { key: "r1", className: "text-xl font-semibold mb-3" }, "रिज़ल्ट"),
+              results.length === 0
+                ? React.createElement("div", { key: "r2", className: "text-slate-500" }, "कोई मिलान नहीं मिला।")
+                : React.createElement("div", { key: "r3", className: "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" },
+                    results.slice(0, showCount).map((r, idx) =>
+                      React.createElement("a", {
+                        key: idx,
+                        href: r.downloadUrl,
+                        target: "_blank",
+                        rel: "noreferrer",
+                        className: "block border rounded overflow-hidden hover:shadow-md"
+                      }, [
+                        React.createElement("img", {
+                          key: "img",
+                          src: r.downloadUrl,
+                          alt: `match-${idx}`,
+                          className: "w-full aspect-square object-cover"
+                        }),
+                        React.createElement("div", { key: "cap", className: "px-2 py-1 text-sm flex items-center justify-between" }, [
+                          React.createElement("span", { key: "s" }, `${Math.round(r.similarity || 0)}%`),
+                          React.createElement("span", { key: "f", className: "text-slate-500" }, r.folderId || "")
+                        ])
+                      ])
+                    )
+                  ),
+              results.length > showCount &&
+                React.createElement("div", { key: "more", className: "mt-4" },
+                  React.createElement("button", {
+                    onClick: () => setShowCount(c => c + 24),
+                    className: "px-3 py-1.5 rounded border"
+                  }, "और दिखाएँ")
+                ),
+              results.length > 0 &&
+                React.createElement("div", { key: "zip", className: "mt-4" },
+                  React.createElement("button", {
+                    onClick: bulkZip,
+                    className: "px-3 py-1.5 rounded border"
+                  }, "Bulk ZIP Download")
+                )
+            ])
+          )
+        );
       }
-      const json = await res.json();
-      // unify results format
-      if (json?.results?.length) {
-        json.results.forEach(r => out.push(r));
-      }
-    }
 
-    lastPayload = out;
-    showCount = 12;
-    renderResults();
-  };
-
-  const renderResults = () => {
-    results.innerHTML = "";
-    if (!lastPayload || !lastPayload.length) {
-      results.innerHTML = `<div class="text-sm text-gray-500">कोई मिलान नहीं मिला।</div>`;
-      return;
-    }
-
-    const slice = lastPayload.slice(0, showCount);
-    slice.forEach((r, ix) => {
-      const div = document.createElement("div");
-      const sim = Math.round(r.similarity || r.score || 0);
-      const key = r.key || r.imageKey || "";
-      const url = r.downloadUrl || r.url || "#";
-      div.className = "bg-white rounded-lg shadow border overflow-hidden";
-      div.innerHTML = `
-        <div class="p-2 text-xs text-gray-500 flex items-center justify-between">
-          <div>Similarity: <b>${sim}%</b></div>
-          <a class="text-orange-700 underline" href="${url}" target="_blank">Download</a>
-        </div>
-        <img src="${url}" class="w-full h-40 object-cover">
-        <div class="p-2 text-[11px] text-gray-500 truncate">${key}</div>
-      `;
-      results.appendChild(div);
-    });
-  };
-
-  $("btnSearch").onclick = doSearch;
-  $("btnSeeMore").onclick = () => { showCount += 12; renderResults(); };
-
-  // Bulk ZIP Download
-  $("btnZip").onclick = async () => {
-    if (!lastPayload || !lastPayload.length) return toast("डाउनलोड के लिए पहले सर्च करें।");
-
-    const zip = new JSZip();
-    const folder = zip.folder("results");
-    for (let i = 0; i < lastPayload.length; i++) {
-      const r = lastPayload[i];
-      const url = r.downloadUrl || r.url;
-      if (!url) continue;
-      const res = await fetch(url);
-      const blob = await res.blob();
-      const name = (r.key || `img_${i}`).split("/").pop() || `img_${i}.jpg`;
-      folder.file(name, blob);
-    }
-    const z = await zip.generateAsync({type: "blob"});
-    saveAs(z, `results_${Date.now()}.zip`);
-  };
-</script>
-</body>
+      ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+    </script>
+  </body>
 </html>
