@@ -1,317 +1,276 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="hi">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>भारतीय जनता पार्टी – मंदसौर | Selfie Search</title>
-
-  <!-- ============ THEME (डार्क + ऑरेंज) ============ -->
   <style>
     :root{
-      --bg:#0f172a;         /* slate-900 */
-      --panel:#111827;      /* gray-900 */
-      --muted:#9ca3af;      /* gray-400 */
-      --text:#e5e7eb;       /* gray-200 */
-      --brand:#f97316;      /* orange-500 */
-      --brand-600:#ea580c;  /* orange-600 */
-      --card:#0b1220;
-      --ring:#334155;
+      --bg:#0b1220; --card:#0f1629; --muted:#9bb0d3; --text:#e9eefc;
+      --brand:#ff7a00; --brand-2:#ff9c40; --danger:#ff5757;
+      --chip:#1a2442; --chip2:#0f1b36; --ok:#2ecc71;
     }
-    html,body{background:var(--bg); color:var(--text); margin:0; font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, "Helvetica Neue", Arial;}
-    .container{max-width:1200px; margin:0 auto; padding:16px;}
-    header{display:flex; align-items:center; gap:12px; padding:8px 0 18px;}
-    header img{height:28px; width:auto; object-fit:contain;}
-    header .title{font-weight:700; font-size:20px;}
-    .pill{display:inline-block; padding:2px 8px; border-radius:999px; background:#1f2937; color:#e5e7eb; border:1px solid #374151; font-size:12px}
-    .btn{appearance:none; border:0; background:var(--brand); color:white; padding:10px 14px; border-radius:10px; font-weight:600; cursor:pointer}
-    .btn:hover{background:var(--brand-600)}
-    .btn.secondary{background:#1f2937; color:#e5e7eb; border:1px solid #374151}
-    .btn.ghost{background:transparent; border:1px solid #475569; color:#e5e7eb}
-    .grid{display:grid; gap:18px}
-    @media(min-width:900px){ .grid.two{grid-template-columns: 1.2fr 1fr} }
-    .card{background:var(--panel); border:1px solid #1f2937; border-radius:14px; padding:14px}
-    h2{margin:0 0 12px; font-size:20px}
-    label{display:block; font-size:14px; color:var(--muted); margin-bottom:6px}
-    input[type="text"]{width:100%; background:#0b1220; color:#e5e7eb; border:1px solid var(--ring); border-radius:10px; padding:10px 12px; outline:none}
-    input[type="text"]:focus{border-color:var(--brand)}
-    .row{display:flex; gap:12px}
-    .row > *{flex:1}
-    .preview-box{display:flex; align-items:flex-start; gap:14px}
-    .frame{background:var(--card); border:1px dashed #334155; border-radius:12px; width:100%; height:360px; display:flex; align-items:center; justify-content:center; overflow:hidden}
-    video, canvas, img{max-width:100%; height:100%; object-fit:cover}
-    .panel-muted{font-size:14px; color:var(--muted)}
-    /* results */
-    #results-list{display:grid; gap:14px; grid-template-columns: repeat(auto-fill,minmax(210px,1fr));}
-    .result{background:#0b1220; border:1px solid #1f2937; border-radius:12px; overflow:hidden}
-    .result img{width:100%; height:180px; object-fit:cover}
-    .meta{padding:8px 10px; font-size:13px; color:#cbd5e1; display:flex; justify-content:space-between; align-items:center}
-    .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-    .mt8{margin-top:8px}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Inter,Arial}
+    .wrap{max-width:1100px;margin:auto;padding:16px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    header .logo{width:32px;height:32px;border-radius:6px;background:var(--brand)}
+    header h1{font-size:18px;margin:0}
+    .grid{display:grid;gap:16px}
+    @media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
+    .card{background:var(--card);border:1px solid #1a2544;border-radius:12px;padding:14px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .btn{background:var(--brand);border:0;color:#1b1002;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+    .btn.alt{background:#233257;color:var(--text)}
+    .btn.ghost{background:transparent;border:1px solid #2b3f71;color:var(--text)}
+    .btn.small{padding:7px 10px;font-weight:600}
+    input[type="file"]{display:block;color:var(--muted)}
+    input.text{width:100%;background:#0b1430;border:1px solid #21345e;color:var(--text);padding:10px 12px;border-radius:10px}
+    .hint{color:var(--muted);font-size:13px}
+    .chip{display:inline-flex;align-items:center;gap:6px;background:var(--chip);border:1px solid #21345e;padding:4px 10px;border-radius:999px;color:var(--muted);font-size:12px}
+    .preview{width:100%;aspect-ratio:4/5;background:#000;border-radius:10px;object-fit:contain;border:1px dashed #2b3f71}
+    .results{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-top:10px}
+    .thumb{background:#0c142b;border:1px solid #223663;border-radius:10px;overflow:hidden}
+    .thumb img{width:100%;height:160px;object-fit:cover;display:block}
+    .thumb .meta{padding:6px 8px;font-size:12px;color:var(--muted)}
+    .ok{color:var(--ok)}
+    .err{color:var(--danger)}
   </style>
-
-  <!-- ============ CONFIG (आप यहाँ भरें) ============ -->
- 9bae11f739e3
 </head>
-
 <body>
-  <div class="container">
-
-    <!-- HEADER -->
+  <div class="wrap">
     <header>
-      <img id="partyLogo" src="Bharatiya_Janata_Party_logo.svg" alt="BJP" onerror="this.style.display='none'">
-      <div class="title">भारतीय जनता पार्टी – मंदसौर</div>
-      <div style="margin-left:auto" class="pill">Selfie Search</div>
+      <div class="logo" aria-hidden="true"></div>
+      <h1>भारतीय जनता पार्टी – मंदसौर</h1>
+      <div style="margin-left:auto" class="hint">Selfie Search</div>
     </header>
 
-    <!-- Lead form -->
-    <div class="row mt8">
-      <div><input id="leadName" type="text" placeholder="आपका नाम"></div>
-      <div><input id="leadMobile" type="text" placeholder="मोबाइल"></div>
-      <div class="panel-muted" style="align-self:center">* केवल रजिस्ट्रेशन हेतु</div>
-    </div>
+    <!-- =========== CONFIG (इसे भरें) =========== -->
+    <script>
+      window.API = {
+        // 1) आपका API base (must end WITHOUT trailing slash)
+        BASE: "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search",
 
-    <!-- MAIN GRID -->
-    <div class="grid two" style="margin-top:16px">
+        // 2) Optional स्थायी Link ID (admin generate-link से) — खाली छोड़ें तो URL ?link= से पढ़ेगा
+        LINK_ID: "", // उदाहरण: "3ff7e052ee37"
 
-      <!-- LEFT : Camera + File -->
-      <div class="card">
-        <h2>फोटो चुनें या कैमरा से कैप्चर करें</h2>
+        // 3) Default folder (जब LINK_ID खाली हो)
+        DEFAULT_FOLDER: "common",
 
-        <div class="frame" id="camFrame">
-          <video id="camVideo" playsinline muted></video>
-          <canvas id="camCanvas" style="display:none;"></canvas>
-        </div>
-
-        <div class="toolbar" style="margin-top:12px">
-          <button class="btn" id="btn-startcam">कैमरा चालू करें</button>
-          <button class="btn secondary" id="btn-capture">कैप्चर करें</button>
-          <button class="btn ghost" id="btn-stop">बंद करें</button>
-        </div>
-
-        <div style="margin-top:14px">
-          <label>एक या ज़्यादा फोटो चुनें (JPEG/PNG/WebP)</label>
-          <input id="filePicker" type="file" accept="image/*" multiple />
-          <div class="panel-muted mt8">* अगर कैमरा ना मिले, ब्राउज़र/डिवाइस अनुमति दें।</div>
-        </div>
-      </div>
-
-      <!-- RIGHT : Picked + Actions -->
-      <div class="card">
-        <h2>चुना गया फोटो <span style="color:#9ca3af">(latest)</span></h2>
-
-        <div class="frame" id="preview">
-          <img id="pickedImg" alt="preview" />
-        </div>
-
-        <div class="toolbar" style="margin-top:12px">
-          <button class="btn" id="btn-search">सर्च करें</button>
-          <button class="btn secondary" id="btn-clear">हटाएँ</button>
-        </div>
-
-        <div class="panel-muted mt8">
-          Folder: <span id="folderPill" class="pill">common</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- RESULTS -->
-    <div class="card" style="margin-top:18px">
-      <h2>रिज़ल्ट</h2>
-
-      <div id="results">
-        <div id="results-list"></div>
-        <p id="empty-msg" style="display:none">कोई मिलान नहीं मिला।</p>
-
-        <div class="toolbar" style="margin-top:12px">
-          <button class="btn secondary" id="btn-more">और दिखाएँ</button>
-          <button class="btn ghost" id="btn-zip">Bulk ZIP Download</button>
-        </div>
-      </div>
-    </div>
-
-  </div>
-<!-- ============ CONFIG (इसे main script से पहले रखें) ============ -->
-<!-- ========== CONFIG (main script से पहले) ========== -->
-<script>
-  window.API = {
-    // 1) API Gateway का BASE (stage "/search" तक ही)
-    BASE: "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search",
-
-    // 2) नया linkId (Step-2 में जो मिला)
-    LINK_ID: "3ff7e052ee37",  // ex: "9bae11f739e3"
-
-    // 3) default folder (fallback)
-    DEFAULT_FOLDER: "common",
-
-    // 4) defaults
-    THRESHOLD: 55,
-    MAX_RESULTS: 30
-  };
-</script>
-
-  <!-- ============ MAIN SCRIPT ============ -->
-  <script>
-    // ---------- read config + URL overrides ----------
-    const qs = new URLSearchParams(location.search);
-
-    const BASE = qs.get("base") || (window.API && window.API.BASE) || "";
-    const LINK_ID = qs.get("link") || (window.API && window.API.LINK_ID) || "";
-    const DEFAULT_FOLDER = qs.get("folder") || (window.API && window.API.DEFAULT_FOLDER) || "common";
-    const THRESHOLD = Number(qs.get("threshold")) || (window.API && window.API.THRESHOLD) || 60;
-    const MAX_RESULTS = Number(qs.get("max")) || (window.API && window.API.MAX_RESULTS) || 20;
-
-    if (!BASE) console.error("API BASE missing! Set window.API.BASE or ?base=...");
-
-    // ---------- DOM refs ----------
-    const video = document.getElementById("camVideo");
-    const canvas = document.getElementById("camCanvas");
-    const pickedImg = document.getElementById("pickedImg");
-    const filePicker = document.getElementById("filePicker");
-
-    const btnStart = document.getElementById("btn-startcam");
-    const btnCapture = document.getElementById("btn-capture");
-    const btnStop = document.getElementById("btn-stop");
-    const btnSearch = document.getElementById("btn-search");
-    const btnClear = document.getElementById("btn-clear");
-    const btnMore = document.getElementById("btn-more");
-    const btnZip = document.getElementById("btn-zip");
-
-    const folderPill = document.getElementById("folderPill");
-    folderPill.textContent = LINK_ID ? "link" : DEFAULT_FOLDER;
-
-    const resultsList = document.getElementById("results-list");
-    const emptyMsg = document.getElementById("empty-msg");
-
-    let hasSearched = false;
-    let stream = null;
-    let showCount = 12; // “और दिखाएँ” के लिए
-
-    // ---------- Camera controls ----------
-    async function startCam(){
-      try{
-        stream = await navigator.mediaDevices.getUserMedia({video:{ facingMode:'user' }, audio:false});
-        video.srcObject = stream;
-        await video.play();
-      }catch(e){
-        console.error(e);
-        alert("कैमरा चालू नहीं हो पाया। ब्राउज़र/डिवाइस अनुमति दें।");
-      }
-    }
-    function stopCam(){
-      if(stream){
-        stream.getTracks().forEach(t => t.stop());
-        stream = null;
-      }
-      video.pause();
-      video.srcObject = null;
-    }
-    function capture(){
-      if(!video.videoWidth){ alert("कैमरा चालू करें और फिर कैप्चर करें।"); return; }
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
-      setPicked(dataUrl);
-    }
-
-    // ---------- File picker ----------
-    filePicker.addEventListener("change", async (ev)=>{
-      const f = ev.target.files?.[0];
-      if(!f) return;
-      const reader = new FileReader();
-      reader.onload = () => setPicked(reader.result);
-      reader.readAsDataURL(f);
-    });
-
-    function setPicked(dataUrl){
-      pickedImg.src = dataUrl;
-    }
-
-    // ---------- Search ----------
-    async function doSearch(){
-      if(!BASE){ alert("API BASE कॉन्फ़िग नहीं है."); return; }
-      if(!pickedImg || !pickedImg.src){ alert("कृपया फोटो चुनें/कैप्चर करें."); return; }
-
-      const body = {
-        imageBase64: pickedImg.src,
-        threshold: THRESHOLD,
-        maxResults: 100 // server पर limit, क्लाइंट पर हम paginate करेंगे
+        // 4) Defaults
+        THRESHOLD: 60,
+        MAX_RESULTS: 20
       };
-      if(LINK_ID) body.linkId = LINK_ID;
-      else body.allowedFolders = [DEFAULT_FOLDER];
+    </script>
 
-      let res;
-      try{
-        res = await fetch(`${BASE}/search`, {
-          method: "POST",
-          headers: { "Content-Type":"application/json" },
-          body: JSON.stringify(body)
-        });
-      }catch(e){
-        console.error(e);
-        alert("नेटवर्क/BASE गलत है।");
-        return;
-      }
+    <!-- =========== MAIN UI =========== -->
+    <div class="grid">
+      <!-- Left: Camera / upload -->
+      <div class="card">
+        <div class="row" style="margin-bottom:10px">
+          <input id="name" class="text" placeholder="आपका नाम" />
+          <input id="mobile" class="text" placeholder="मोबाइल" inputmode="numeric" />
+          <span class="hint">* केवल रजिस्ट्रेशन हेतु</span>
+        </div>
 
-      let json = {};
-      try{ json = await res.json(); }catch{}
-      const list = json?.results || [];
+        <h3 style="margin:6px 0 10px">फोटो चुनें या कैमरा से कैप्चर करें</h3>
+        <video id="video" class="preview" autoplay playsinline muted style="display:none"></video>
+        <img id="preview" class="preview" alt="preview"/>
 
-      hasSearched = true;
-      render(list);
+        <div class="row" style="margin:10px 0">
+          <button id="startCam" class="btn small">कैमरा चालू करें</button>
+          <button id="snap" class="btn small alt">कैप्चर करें</button>
+          <button id="stopCam" class="btn small ghost">बंद करें</button>
+        </div>
+
+        <div class="row" style="margin:6px 0 10px">
+          <input id="file" type="file" accept="image/jpeg,image/png,image/webp" />
+        </div>
+        <div class="hint">* अगर कैमरा ना मिले, ब्राउज़र/डिवाइस अनुमति दें।</div>
+      </div>
+
+      <!-- Right: Selected & Search -->
+      <div class="card">
+        <h3 style="margin:6px 0 10px">चुना गया फोटो <span class="hint">(latest)</span></h3>
+        <img id="picked" class="preview" alt="selected"/>
+
+        <div class="row" style="margin:10px 0 6px">
+          <button id="doSearch" class="btn">सर्च करें</button>
+          <button id="clear" class="btn alt">हटाएँ</button>
+          <span class="chip" id="folderChip">folder: <b id="folderName">link</b></span>
+        </div>
+
+        <div class="row hint">
+          <span>API: <span id="apiChip" class="chip">loading…</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="card" style="margin-top:14px">
+      <h3 style="margin:6px 0 10px">रिज़ल्ट</h3>
+      <div id="msg" class="hint">कोई मिलान नहीं मिला।</div>
+      <div id="results" class="results"></div>
+      <div class="row" style="margin-top:10px">
+        <button id="more" class="btn alt small" style="display:none">और दिखाएँ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========== MAIN SCRIPT =========== -->
+  <script>
+  // ---- Read config + URL overrides
+  const qs = new URLSearchParams(location.search);
+
+  // Clean base (remove trailing /)
+  const BASE = (qs.get("base") || (window.API && window.API.BASE) || "").replace(/\/$/, "");
+
+  // pick linkId (sanitize – सिर्फ़ अल्फ़ा-न्यूमेरिक)
+  const rawLink = qs.get("link") || (window.API && window.API.LINK_ID) || "";
+  const LINK_ID = (rawLink || "").toString().trim().match(/[A-Za-z0-9]{8,16}/)?.[0] || "";
+
+  // default folder (जब linkId खाली)
+  const DEFAULT_FOLDER = (qs.get("folder") || (window.API && window.API.DEFAULT_FOLDER) || "common").trim();
+
+  const THRESHOLD = Number(qs.get("threshold")) || (window.API && window.API.THRESHOLD) || 60;
+  const MAX_RESULTS = Number(qs.get("max")) || (window.API && window.API.MAX_RESULTS) || 20;
+
+  // sanity
+  const apiChip = document.getElementById("apiChip");
+  if (!BASE) {
+    apiChip.textContent = "API BASE कॉन्फ़िग नहीं है";
+    apiChip.classList.add("err");
+  } else {
+    apiChip.textContent = BASE;
+  }
+
+  // ---- DOM refs
+  const video = document.getElementById("video");
+  const preview = document.getElementById("preview");
+  const picked  = document.getElementById("picked");
+  const fileInp = document.getElementById("file");
+  const startCam = document.getElementById("startCam");
+  const stopCam = document.getElementById("stopCam");
+  const snap = document.getElementById("snap");
+  const btnSearch = document.getElementById("doSearch");
+  const btnClear  = document.getElementById("clear");
+  const folderChip = document.getElementById("folderChip");
+  const folderName = document.getElementById("folderName");
+  const resultsBox = document.getElementById("results");
+  const msg = document.getElementById("msg");
+  const btnMore = document.getElementById("more");
+
+  // folder chip info
+  folderName.textContent = LINK_ID ? "link" : DEFAULT_FOLDER;
+
+  // ---- Camera
+  let stream=null;
+  startCam.onclick = async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:"user" }});
+      video.srcObject = stream;
+      video.style.display="";
+      preview.style.display="none";
+    } catch (e) {
+      alert("कैमरा चालू नहीं हो पाया। ब्राउज़र/डिवाइस अनुमति दें।");
+      console.error(e);
     }
+  };
+  stopCam.onclick = () => {
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+    video.style.display="none";
+    preview.style.display="";
+  };
+  snap.onclick = () => {
+    if(!video.srcObject) { alert("पहले कैमरा चालू करें."); return; }
+    const c=document.createElement("canvas");
+    c.width=video.videoWidth||720; c.height=video.videoHeight||900;
+    c.getContext("2d").drawImage(video,0,0,c.width,c.height);
+    picked.src = c.toDataURL("image/jpeg",0.92);
+    msg.textContent=""; resultsBox.innerHTML="";
+  };
 
-    function render(items){
-      resultsList.innerHTML = ""; // clear
-      emptyMsg.style.display = (hasSearched && items.length===0) ? "block":"none";
-      const limited = items.slice(0, showCount);
+  // ---- File select
+  fileInp.onchange = async (ev)=>{
+    const f=ev.target.files?.[0]; if(!f) return;
+    picked.src = await fileToDataURL(f);
+    msg.textContent=""; resultsBox.innerHTML="";
+  };
 
-      for(const r of limited){
-        const card = document.createElement("div");
-        card.className = "result";
-        card.innerHTML = `
-          <img src="${r.downloadUrl}" alt="match">
-          <div class="meta">
-            <span class="pill">${r.folderId || '-'}</span>
-            <span>${Math.round(r.similarity)}%</span>
-          </div>`;
-        resultsList.appendChild(card);
+  function fileToDataURL(f) {
+    return new Promise((res, rej)=>{
+      const r=new FileReader();
+      r.onload=()=>res(r.result);
+      r.onerror=rej; r.readAsDataURL(f);
+    });
+  }
+
+  // ---- Search
+  btnSearch.onclick = async () => {
+    try{
+      const dataURL = picked.src;
+      if(!dataURL || !/^data:image\//.test(dataURL)){
+        alert("कृपया फोटो चुनें/कैप्चर करें।"); return;
+      }
+      if(!BASE){ alert("API BASE कॉन्फ़िग नहीं है."); return; }
+
+      // body: या तो linkId या allowedFolders
+      const body = {
+        imageBase64: dataURL,
+        threshold: THRESHOLD,
+        maxResults: MAX_RESULTS
+      };
+      if(LINK_ID){
+        body.linkId = LINK_ID;
+      } else {
+        body.allowedFolders = [DEFAULT_FOLDER];
       }
 
-      // bulk download list को cache कर लें (भविष्य में JSZip जोड़ना चाहें तो)
-      window.__lastResults = items;
+      const r = await fetch(`${BASE}/search`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(body)
+      });
+      if(!r.ok){
+        const tx = await r.text().catch(()=>r.statusText);
+        throw new Error(`HTTP ${r.status}: ${tx}`);
+      }
+      const j = await r.json();
+      renderResults(j);
+    }catch(err){
+      console.error(err);
+      msg.innerHTML = `<span class="err">Error: ${err.message}</span>`;
     }
+  };
 
-    // ---------- More + Clear ----------
-    btnMore.addEventListener("click", ()=>{
-      showCount += 12;
-      if(window.__lastResults) render(window.__lastResults);
+  btnClear.onclick = ()=>{
+    picked.src=""; resultsBox.innerHTML=""; msg.textContent=""; fileInp.value="";
+  };
+
+  // ---- Render results (simple)
+  function renderResults(j){
+    const arr = j?.results || [];
+    resultsBox.innerHTML="";
+    if(!arr.length){ msg.textContent="कोई मिलान नहीं मिला।"; btnMore.style.display="none"; return; }
+    msg.textContent = `${j.count||arr.length} परिणाम मिले`;
+    arr.forEach(item=>{
+      const el=document.createElement("div");
+      el.className="thumb";
+      const img=document.createElement("img");
+      // pre-signed url दी है; सीधे दिखाइए
+      img.src=item.downloadUrl || "#";
+      const meta=document.createElement("div");
+      meta.className="meta";
+      meta.innerHTML = `<b class="ok">${Math.round(item.similarity||0)}%</b> • <span class="hint">${item.key||""}</span>`;
+      el.appendChild(img); el.appendChild(meta);
+      resultsBox.appendChild(el);
     });
+    btnMore.style.display="none"; // server pagination न हो तो छुपाएँ
+  }
 
-    btnClear.addEventListener("click", ()=>{
-      pickedImg.removeAttribute("src");
-      filePicker.value = "";
-    });
-
-    // ---------- Bind buttons ----------
-    btnStart.addEventListener("click", startCam);
-    btnStop.addEventListener("click", stopCam);
-    btnCapture.addEventListener("click", capture);
-    btnSearch.addEventListener("click", doSearch);
-
-    // ZIP (placeholder)
-    btnZip.addEventListener("click", ()=>{
-      if(!window.__lastResults?.length){
-        alert("डाउनलोड के लिए पहले कुछ परिणाम होने चाहिए।");
-        return;
-      }
-      // यहां आप JSZip जोड़ कर zip बना सकते हैं — अभी हम सिर्फ़ समझाते हैं:
-      alert("Bulk ZIP: JSZip जोड़ें और window.__lastResults की downloadUrl से blob fetch करके ZIP बनायें।");
-    });
-
-    // पेज लोड पर “No results” हाइड रहे
-    emptyMsg.style.display = "none";
+  // Initial previews hidden
+  preview.style.display="";
+  picked.src="";
   </script>
 </body>
 </html>
