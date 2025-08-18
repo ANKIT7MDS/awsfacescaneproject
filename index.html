@@ -96,9 +96,7 @@
         <div class="stack" style="margin:12px 0 6px">
           <button class="btn ghost" id="btnStart">Open Camera</button>
           <button class="btn ghost" id="btnSnap" disabled>Capture</button>
-          <button class="btn ghost" id="btnStop" disabled>Stop</button>
           <button class="btn primary" id="btnSearch" disabled>Search</button>
-          <button class="btn ghost" id="btnClear">Clear</button>
           <span class="pill" id="cfgInfo"></span>
         </div>
         <div id="fileRow" class="stack" style="margin-top:6px">
@@ -161,7 +159,7 @@
     const file    = document.getElementById('file');
     const btnStart= document.getElementById('btnStart');
     const btnSnap = document.getElementById('btnSnap');
-    const btnStop = document.getElementById('btnStop');
+    // no stop button
     const btnSearch = document.getElementById('btnSearch');
     const btnClear  = document.getElementById('btnClear');
     const apiField  = document.getElementById('apiField');
@@ -193,16 +191,21 @@
     }
     function toDataURLFromFile(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f);}); }
 
-    async function startCam(){
+    async async function startCam(){
       if (stream) return;
       try{
         stream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:"user"}, audio:false });
         video.srcObject = stream; video.onloadedmetadata=()=>video.play();
         video.style.display=""; preview.style.display="none";
-        btnSnap.disabled=false; btnStop.disabled=false;
+        btnSnap.disabled=false;
+      }catch{ alert("Camera not available. Please allow permission."); }
+    }, audio:false });
+        video.srcObject = stream; video.onloadedmetadata=()=>video.play();
+        video.style.display=""; preview.style.display="none";
+        btnSnap.disabled=false; /* no stop btn */
       }catch{ alert("Camera not available. Please allow permission."); }
     }
-    function stopCam(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } btnSnap.disabled=true; btnStop.disabled=true; video.style.display="none"; }
+    function stopCam(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } btnSnap.disabled=true; /* no stop btn */ video.style.display="none"; }
 
     function snap(){
       if (!video.videoWidth) return;
@@ -213,7 +216,8 @@
       setSelected(dataUrl);  // तुरंत यहीं select
     }
 
-    btnStart.onclick=startCam; btnStop.onclick=stopCam; btnSnap.onclick=snap;
+    btnStart.onclick=startCam;
+    btnSnap.onclick=()=>{ if(btnSnap.dataset.mode==='retake'){ preview.style.display='none'; video.style.display=''; btnSnap.textContent='Capture'; btnSnap.dataset.mode='capture'; } else { snap(); } };
 
     if (file){ file.onchange = async (ev)=>{ const f=ev.target.files?.[0]; if(!f) return; setSelected(await toDataURLFromFile(f)); }; }
     btnClear.onclick = ()=> setSelected("");
@@ -234,7 +238,6 @@
       btnNext.disabled = (currentPage>=totalPages);
       const anySel = resultsEl.querySelectorAll('.tile.selected').length>0;
       btnDownloadSel.disabled = !anySel;
-      btnClearSel.disabled = !anySel;
     }
 
     function renderPage(){
@@ -245,18 +248,22 @@
       resultsEl.innerHTML = slice.map((x,i)=>`
         <div class="tile" data-idx="${start+i}">
           <span class="check-badge">✓</span>
-          <img src="${x.downloadUrl||''}" alt="match" />
+          <img src="${x.downloadUrl||''}" alt="match" data-zoom="${x.downloadUrl||''}"/>
+          <button class="dl" title="Download" data-url="${x.downloadUrl||''}">⬇︎</button>
         </div>
       `).join("");
       resultsEl.style.display = slice.length ? "" : "none";
 
-      // selection by clicking image/tile; checkbox badge only after selection
+      // click handlers
       resultsEl.querySelectorAll('.tile').forEach(tile=>{
-        tile.addEventListener('click',()=>{
-          tile.classList.toggle('selected');
-          updatePager();
+        tile.addEventListener('click', (e)=>{
+          const tgt=e.target;
+          if(tgt.closest('.dl')) return; // handled by download
+          if(tgt.tagName==='IMG'){ openLightbox(Number(tile.dataset.idx)); return; }
+          tile.classList.toggle('selected'); updatePager();
         });
       });
+      resultsEl.querySelectorAll('.dl').forEach(btn=> btn.addEventListener('click', async (e)=>{ e.stopPropagation(); const url=e.currentTarget.getAttribute('data-url'); if(url) try{ await forceDownload(url);}catch(err){ console.warn('download failed', url, err);} }));
       updatePager();
     }
 
@@ -265,55 +272,29 @@
     pageSizeSel.onchange = ()=>{ currentPage=1; renderPage(); };
 
     document.getElementById('btnSelectAll').onclick = ()=>{
-      resultsEl.querySelectorAll('.tile').forEach(t=>{ t.classList.add('selected'); }); updatePager();
-    };
-    document.getElementById('btnUnselectAll').onclick = ()=>{
-      resultsEl.querySelectorAll('.tile').forEach(t=>{ t.classList.remove('selected'); }); updatePager();
-    };
-    document.getElementById('btnClearSel').onclick = document.getElementById('btnUnselectAll').onclick;
+      const tiles = [...resultsEl.querySelectorAll('.tile')];
+      const allSelected = tiles.length && tiles.every(t=> t.classList.contains('selected'));
+      tiles.forEach(t=> t.classList.toggle('selected', !allSelected)); updatePager(); };
+    document.getElementById('btnUnselectAll').onclick = ()=>{ resultsEl.querySelectorAll('.tile').forEach(t=> t.classList.remove('selected')); updatePager(); };
 
-    function fileNameFromUrl(u){ try{ return decodeURIComponent(new URL(u).pathname.split('/').pop()||'photo.jpg'); }catch{return 'photo.jpg'} }
-    async function forceDownload(url){ const resp = await fetch(url,{mode:'cors'}); const blob = await resp.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileNameFromUrl(url); document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 50); }
-    document.getElementById('btnDownloadSel').onclick = async ()=>{
-      const selectedUrls = [...resultsEl.querySelectorAll('.tile.selected')].map(t=>{ const idx = Number(t.dataset.idx); return allResults[idx]?.downloadUrl; }).filter(Boolean);
-      for (const url of selectedUrls){ try{ await forceDownload(url); }catch(e){ console.warn("download failed", url, e); } }
-    };
+    async function forceDownload(url){ const resp = await fetch(url,{mode:'cors'}); const blob = await resp.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (new URL(url)).pathname.split('/').pop()||'photo.jpg'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 50); }
 
-    document.getElementById('btnSearch').onclick = async ()=>{
-      if (!currentDataUrl){ alert("Pick/Capture a photo first."); return; }
-      if (!BASE){ alert("API BASE is missing."); return; }
+    // Lightbox controls
+    let lbIndex=-1; const lightbox=document.getElementById('lightbox'); const lightImg=document.getElementById('lightImg'); const lbClose=document.getElementById('lbClose'); const lbPrev=document.getElementById('lbPrev'); const lbNext=document.getElementById('lbNext');
+    function openLightbox(globalIdx){ lbIndex=globalIdx; updateLightbox(); lightbox.classList.add('show'); }
+    function closeLightbox(){ lightbox.classList.remove('show'); lightImg.src=''; }
+    function updateLightbox(){ const item = allResults[lbIndex]; if(!item) return closeLightbox(); lightImg.src = item.downloadUrl||''; }
+    function step(d){ const total=allResults.length; if(!total) return; lbIndex=(lbIndex+d+total)%total; updateLightbox(); }
+    lbClose.onclick=closeLightbox; lbPrev.onclick=()=>step(-1); lbNext.onclick=()=>step(1); lightbox.addEventListener('click',e=>{ if(e.target===lightbox) closeLightbox(); });
 
-      msg.textContent = "Searching..."; resultsEl.style.display="none"; resultsEl.innerHTML="";
-
-      const body = { imageBase64: currentDataUrl, threshold: THRESHOLD, maxResults: MAX_RESULTS };
-      if (LINK_ID) body.linkId = LINK_ID; else body.allowedFolders = [DEFAULT_FOLDER];
-
-      try{
-        const r = await fetch(`${BASE}/search`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
-        const j = await r.json().catch(()=> ({}));
-
-        if (!r.ok){ msg.innerHTML = `<div class="error">Server Error (${r.status}).</div>`; console.warn(j); return; }
-        if (!j || !Array.isArray(j.results)){ msg.innerHTML = `<div class="error">Unexpected response.</div>`; console.warn(j); return; }
-
-        // de-duplicate results on frontend by canonical URL path (ignores query/size params)
-        const canon = (u)=>{ try{ const x=new URL(u); return x.origin + x.pathname.toLowerCase(); }catch{ return (u||'').toLowerCase(); } };
-        const seen = new Set();
-        allResults = (j.results||[]).filter(it=>{ const k = canon(it.downloadUrl||''); if(seen.has(k)) return false; seen.add(k); return true; });
-
-        if (j.count && j.count > allResults.length){
-          msg.innerHTML = `<div class="okmsg">Found: ${j.count}. Showing unique: ${allResults.length}. Need more? add <b>?max=500</b> in URL.</div>`;
-        } else {
-          msg.innerHTML = `<div class="okmsg">${allResults.length} unique matches.</div>`;
-        }
-        currentPage = 1; renderPage();
-
-      }catch(err){
-        console.error(err);
-        msg.innerHTML = `<div class="error">Network/JSON error.</div>`;
-      }
-    };
-
-    // init
+    // hook: toast + scroll on Search click (runs in addition to existing handler)
+    (function(){
+      const btn=document.getElementById('btnSearch');
+      const toast=document.getElementById('toast');
+      const resultsCard = document.querySelector('section.card ~ section.card');
+      if(btn){ btn.addEventListener('click', ()=>{ if(resultsCard) resultsCard.scrollIntoView({behavior:'smooth'}); if(toast) toast.classList.add('show'); }); }
+      startCam();
+    })();
     (function(){ selected.src=""; })();
   </script>
 </body>
