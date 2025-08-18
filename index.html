@@ -2,71 +2,71 @@
 <html lang="hi">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Selfie Search — Inline Camera (FotoOwl-like)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Selfie Search — Updated (robust API + camera permissions)</title>
   <style>
     :root{
-      --bg:#fff8f1;--panel:#ffffff;--text:#111827;--muted:#6b7280;--line:#f1e6d8;
-      --brand:#ff2c2c;--brand2:#ff6a6a;--ok:#10b981;--bad:#ef4444;
-      --chip:#fff1e0;--shadow:0 8px 24px rgba(255,0,0,.18)
+      --bg:#fff8f1;--panel:#ffffff;--text:#1e1b16;--muted:#6b7280;--line:#f1e6d8;
+      --brand:#ff7a00;--brand2:#ff9e3d;--chip:#fff1e0;--shadow:0 8px 24px rgba(255,122,0,.18);
+      --ok:#16a34a;--bad:#ef4444
     }
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    body.zooming{overflow:hidden}
     .wrap{max-width:1120px;margin-inline:auto;padding:18px}
     header{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
-    .title{font-size:24px;font-weight:800}
-    .subtitle{font-size:15px;color:#374151}
+    .title{font-size:24px;font-weight:800;color:#c2410c}
+    .subtitle{font-size:15px;color:#92400e}
     .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 2px 14px rgba(0,0,0,.04)}
+    .row{display:grid;grid-template-columns:1fr;gap:16px}
+    @media(min-width:920px){.row{grid-template-columns:1fr 1fr}}
 
     .h1{font-size:18px;margin:0 0 8px}
     .pill{display:inline-flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:#8b5a2b}
+    input[type=text],select{width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:12px 14px}
 
-    .btn{appearance:none;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer;transition:transform .05s ease, box-shadow .2s}
+    .btn{appearance:none;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer;transition:transform .05s, box-shadow .2s}
     .btn:active{transform:translateY(1px)}
-    .btn.primary{background:linear-gradient(180deg,var(--brand),var(--brand2));color:#fff;box-shadow:var(--shadow)}
+    .btn.primary{background:linear-gradient(180deg,var(--brand),var(--brand2));color:#3a1d00;box-shadow:var(--shadow)}
     .btn.ghost{background:#fff;color:#3b3b3b;border:1px solid var(--line)}
+    .btn.bad{background:#ffe4e6;color:#9f1239;border:1px solid #fecdd3}
     .btn.ok{background:#dcfce7;color:#14532d;border:1px solid #bbf7d0}
     .stack{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 
-    /* Inline camera box */
-    .media{aspect-ratio:1/1;background:#000;border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+    .media{aspect-ratio:4/3;background:#fff;border:1px dashed var(--line);border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden}
     .media video,.media img{width:100%;height:100%;object-fit:cover}
-    .ring{position:absolute;inset:10px;border-radius:999px;border:2px dashed rgba(255,255,255,.28);pointer-events:none}
-    .mesh{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
-    .mesh svg{width:64%;opacity:.9}
-
-    /* Results grid */
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:10px}
-    .tile{background:#fff;border:1px solid var(--line);border-radius:12px;position:relative;overflow:hidden}
-    .tile img{display:block;width:100%;height:230px;object-fit:cover;cursor:pointer}
-    .tile.selected{outline:3px solid var(--ok);outline-offset:-3px}
-    .check-badge{position:absolute;top:8px;left:8px;background:var(--ok);color:#062e24;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:800;display:none}
-    .tile.selected .check-badge{display:inline-block}
-    .dl{position:absolute;right:8px;bottom:8px;border:0;border-radius:10px;padding:6px 8px;background:#ffffffcc;backdrop-filter:blur(6px);cursor:pointer}
-
-    .sticky-bar{position:sticky;bottom:0;z-index:5;background:#fffbeccc;backdrop-filter:blur(6px);padding:10px;border:1px solid var(--line);border-radius:12px;margin-top:12px;display:flex;justify-content:space-between;align-items:center}
 
     .note{font-size:12px;color:var(--muted)}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:10px}
+    .tile{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px;position:relative;transition:box-shadow .12s, transform .12s}
+    .tile:hover{box-shadow:0 12px 28px rgba(0,0,0,.08)}
+    .tile img{width:100%;height:220px;object-fit:cover;border-radius:10px;transition:transform .2s ease;cursor:pointer}
+    .tile:hover img{transform:scale(1.03)}
+    .tile input[type=checkbox]{position:absolute;top:10px;left:10px;scale:1.2}
+    .tile.selected{outline:3px solid var(--brand);outline-offset:2px}
+
+    .sticky-bar{position:sticky;bottom:0;z-index:5;background:#fffbeccc;backdrop-filter:blur(6px);padding:10px;border:1px solid var(--line);border-radius:12px;margin-top:12px}
+    body.zooming .sticky-bar{display:none}
+
     .error{border-left:4px solid var(--bad);background:#fff1f2;padding:10px 12px;border-radius:10px;color:#7f1d1d}
     .okmsg{border-left:4px solid var(--ok);background:#ecfdf5;padding:10px 12px;border-radius:10px;color:#064e3b}
 
-    /* Toast */
-    .toast{position:fixed;top:14px;right:14px;background:#111827;color:#fff;border:1px solid #374151;border-radius:10px;padding:10px 14px;z-index:60;display:none;box-shadow:0 10px 20px rgba(0,0,0,.35)}
-    .toast.show{display:block}
-
-    /* Lightbox / Slide view */
-    .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}
+    /* Lightbox */
+    .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
     .lightbox.show{display:flex}
-    .lightbox img{max-width:92vw;max-height:86vh;border-radius:12px}
-    .lb-close{position:fixed;top:12px;right:14px;font-size:22px;background:rgba(0,0,0,.5);color:#fff;border:0;border-radius:999px;width:36px;height:36px;display:grid;place-items:center;cursor:pointer}
-    .lb-nav{position:fixed;top:50%;transform:translateY(-50%);font-size:40px;background:rgba(0,0,0,.45);color:#fff;border:0;border-radius:10px;padding:6px 10px;cursor:pointer}
+    .lightbox img{max-width:95vw;max-height:88vh;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,.35)}
+    .lb-close,.lb-nav{position:fixed;color:#fff}
+    .lb-close{top:14px;right:14px;background:rgba(0,0,0,.45);border-radius:999px;width:36px;height:36px;display:grid;place-items:center;font-size:22px;cursor:pointer}
+    .lb-nav{top:50%;transform:translateY(-50%);font-size:40px;user-select:none;cursor:pointer;background:rgba(0,0,0,.35);border-radius:10px;padding:8px 12px}
     .lb-prev{left:14px}.lb-next{right:14px}
 
-    /* मोबाइल पर file input छिपाएँ */
-    @media (max-width:640px){ #fileRow{display:none} }
+    /* Dev/Test panel */
+    #dev{display:none;margin-top:12px}
+    #dev pre{max-height:240px;overflow:auto;background:#0f172a;color:#e5e7eb;padding:10px;border-radius:10px}
   </style>
 
-  <!-- CONFIG (defaults preserved) -->
+  <!-- CONFIG (same keys as your working file) -->
   <script>
     window.API = {
       BASE: "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search",
@@ -84,45 +84,55 @@
       <div class="subtitle">भारतीय जनता पार्टी के कार्यक्रम में आपकी उपस्थिति के फोटो यहाँ से प्राप्त करें</div>
     </header>
 
-    <section class="card" id="cameraCard">
-      <div class="h1">सेल्फी लें और यहीं से सर्च करें</div>
-      <div class="media" id="mediaBox">
-        <video id="video" playsinline></video>
-        <img id="preview" alt="preview" style="display:none" />
-        <div class="ring"></div>
-        <div class="mesh" aria-hidden="true">
-          <svg viewBox="0 0 100 100">
-            <g fill="none" stroke="rgba(255,200,0,.9)" stroke-width=".6">
-              <polygon points="20,30 50,15 80,30 85,55 50,90 15,55"/>
-              <polyline points="20,30 50,50 80,30"/>
-              <polyline points="15,55 50,70 85,55"/>
-              <polyline points="50,15 50,70 50,90"/>
-            </g>
-          </svg>
+    <div class="row">
+      <!-- Left: Camera / File pick -->
+      <section class="card">
+        <div class="h1">फोटो चुनें या कैमरा से कैप्चर</div>
+
+        <div class="media" id="mediaBox">
+          <video id="video" playsinline></video>
+          <img id="preview" alt="preview" style="display:none" />
         </div>
-      </div>
 
-      <div class="stack" style="margin:12px 0 6px">
-        <button class="btn ghost" id="btnStart">Open Camera</button>
-        <button class="btn ghost" id="btnSnap" disabled>Capture</button>
-        <button class="btn primary" id="btnSearch" disabled>Search</button>
-        <span class="pill" id="cfgInfo"></span>
-      </div>
+        <div class="stack" style="margin:12px 0 8px">
+          <button class="btn ghost" id="btnStart">Start Camera</button>
+          <button class="btn ghost" id="btnSnap" disabled>Capture</button>
+          <button class="btn ghost" id="btnStop" disabled>Stop</button>
+        </div>
 
-      <div id="fileRow" class="stack" style="margin-top:6px">
-        <input type="file" id="file" accept="image/*" multiple />
-        <span class="note">* मोबाइल पर यह छिपा रहेगा – कैमरा से सेल्फी लें</span>
-      </div>
+        <div id="fileRow" class="stack" style="margin-top:6px">
+          <input type="file" id="file" accept="image/*" capture="user" />
+          <span class="note">* यदि कैमरा न खुले तो यहां से सेल्फ़ी अपलोड करें</span>
+        </div>
 
-      <div class="note" style="margin-top:8px">API: <input id="apiField" type="text" readonly style="width:100%" /> <span class="pill" id="folderInfo" style="margin-left:8px"></span></div>
-    </section>
+        <div id="camWarn" class="error" style="display:none;margin-top:10px"></div>
+      </section>
 
-    <!-- Toast -->
-    <div id="toast" class="toast">🔎 आपकी फ़ोटो खोजी जा रही हैं…</div>
+      <!-- Right: Selected + Search -->
+      <section class="card">
+        <div class="stack" style="justify-content:space-between">
+          <div class="h1">Selected Photo <span class="pill muted">latest</span></div>
+          <span class="pill" id="folderInfo">folder: link</span>
+        </div>
+
+        <div class="media"><img id="selected" alt="selected" /></div>
+
+        <div class="stack" style="margin:12px 0 6px">
+          <button class="btn primary" id="btnSearch" disabled>Search</button>
+          <button class="btn ghost" id="btnClear">Clear</button>
+          <span class="pill" id="cfgInfo"></span>
+        </div>
+
+        <div class="note">API:
+          <input id="apiField" type="text" readonly />
+        </div>
+      </section>
+    </div>
 
     <!-- Results -->
-    <section class="card" id="resultsCard" style="margin-top:16px">
+    <section class="card" style="margin-top:16px">
       <div class="h1">Results</div>
+
       <div class="stack" style="align-items:center;justify-content:space-between;margin-bottom:10px">
         <div class="stack">
           <label class="pill">Page size
@@ -142,20 +152,38 @@
       <div id="msg" class="note">No search yet.</div>
       <div id="results" class="grid" style="display:none"></div>
 
-      <div class="sticky-bar">
-        <button class="btn ghost" id="btnToggleAll">Select all</button>
-        <button class="btn ok" id="btnDownloadSel" disabled>Download selected</button>
+      <div class="sticky-bar stack" style="justify-content:space-between;margin-top:12px">
+        <div class="stack">
+          <button class="btn ghost" id="btnSelectAll">Select all in page</button>
+          <button class="btn ghost" id="btnUnselectAll">Unselect</button>
+        </div>
+        <div class="stack">
+          <button class="btn ok" id="btnDownloadSel" disabled>Download selected</button>
+          <button class="btn bad" id="btnClearSel" disabled>Clear selection</button>
+        </div>
       </div>
     </section>
-
-    <!-- Lightbox / Slide View -->
-    <div id="lightbox" class="lightbox" aria-hidden="true">
-      <button class="lb-close" id="lbClose" title="Close">×</button>
-      <button class="lb-nav lb-prev" id="lbPrev" title="Previous">‹</button>
-      <img id="lightImg" alt="zoom" />
-      <button class="lb-nav lb-next" id="lbNext" title="Next">›</button>
-    </div>
   </div>
+
+  <!-- Lightbox -->
+  <div id="lightbox" class="lightbox" aria-hidden="true">
+    <div class="lb-close" id="lbClose" title="Close">×</div>
+    <div class="lb-nav lb-prev" id="lbPrev" title="Previous">‹</div>
+    <img id="lightImg" alt="zoom" />
+    <div class="lb-nav lb-next" id="lbNext" title="Next">›</div>
+  </div>
+
+  <!-- Dev/Test (appears when ?debug=1) -->
+  <section id="dev" class="wrap">
+    <div class="card">
+      <div class="h1">Dev / Tests</div>
+      <div class="stack">
+        <button class="btn ghost" id="tEnvelope">Test: API Gateway envelope</button>
+        <button class="btn ghost" id="tAltKeys">Test: alt keys (images[]/imageUrl)</button>
+      </div>
+      <pre id="devLog"></pre>
+    </div>
+  </section>
 
   <script>
     /* ---------- Config ---------- */
@@ -168,17 +196,18 @@
 
     // Hard fallbacks
     if(!BASE) BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search";
-    if(!LINK_ID) LINK_ID = "3ff7e052ee37";
-
     const SEARCH_URL = /\/search$/.test(BASE) ? BASE : `${BASE}/search`;
 
     /* ---------- DOM ---------- */
     const video   = document.getElementById('video');
     const preview = document.getElementById('preview');
+    const selected= document.getElementById('selected');
     const file    = document.getElementById('file');
     const btnStart= document.getElementById('btnStart');
     const btnSnap = document.getElementById('btnSnap');
+    const btnStop = document.getElementById('btnStop');
     const btnSearch = document.getElementById('btnSearch');
+    const btnClear  = document.getElementById('btnClear');
     const apiField  = document.getElementById('apiField');
     const cfgInfo   = document.getElementById('cfgInfo');
     const folderInfo= document.getElementById('folderInfo');
@@ -189,43 +218,57 @@
     const countBadge = document.getElementById('countBadge');
     const btnPrev = document.getElementById('btnPrev');
     const btnNext = document.getElementById('btnNext');
-    const btnToggleAll = document.getElementById('btnToggleAll');
+    const btnSelectAll = document.getElementById('btnSelectAll');
+    const btnUnselectAll = document.getElementById('btnUnselectAll');
     const btnDownloadSel = document.getElementById('btnDownloadSel');
-
-    const toast = document.getElementById('toast');
+    const btnClearSel = document.getElementById('btnClearSel');
+    const lightbox = document.getElementById('lightbox');
+    const lightImg = document.getElementById('lightImg');
+    const lbClose = document.getElementById('lbClose');
+    const lbPrev  = document.getElementById('lbPrev');
+    const lbNext  = document.getElementById('lbNext');
+    const camWarn = document.getElementById('camWarn');
 
     apiField.value = SEARCH_URL || "(missing)";
     cfgInfo.textContent = LINK_ID ? `linkId: ${LINK_ID}, max=${MAX_RESULTS}` : `folder: ${DEFAULT_FOLDER}, max=${MAX_RESULTS}`;
     folderInfo.textContent = LINK_ID ? "folder: link" : `folder: ${DEFAULT_FOLDER}`;
 
-    /* ---------- Camera (inline) ---------- */
-    let stream = null, currentDataUrl = "";  // यही dataUrl search में जाएगा
+    /* ---------- Camera (permission hardened) ---------- */
+    let stream = null, currentDataUrl = "";
 
     function setSelected(dataUrl){
       currentDataUrl = dataUrl || "";
+      selected.src = dataUrl || "";
       btnSearch.disabled = !dataUrl || !SEARCH_URL;
     }
-
-    function toDataURLFromFile(f){
-      return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f); });
-    }
+    function toDataURLFromFile(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f);}); }
 
     async function startCam(){
       if (stream) return;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        camWarn.style.display='block'; camWarn.textContent='Camera API not available in this browser.'; return;
+      }
       try{
         if(location.protocol!=='https:' && location.hostname!=='localhost'){
-          console.warn('Camera requires HTTPS.');
+          camWarn.style.display='block'; camWarn.textContent='Open over HTTPS (camera blocked on http).';
         }
-        stream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:"user"}, audio:false });
-        video.setAttribute('playsinline','');
-        video.setAttribute('autoplay','');
-        video.muted = true;
-        video.srcObject = stream;
-        video.onloadedmetadata = async()=>{ try{ await video.play(); }catch(e){ console.warn('autoplay blocked', e);} };
+        // Permissions hint (best effort)
+        if(navigator.permissions && navigator.permissions.query){
+          try{ const st = await navigator.permissions.query({name:'camera'}); if(st.state==='denied') throw Object.assign(new Error('Permission denied'),{name:'NotAllowedError'}); }catch(_){}
+        }
+        const constraints = { video:{ facingMode:{ideal:'user'} }, audio:false };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.setAttribute('playsinline',''); video.setAttribute('autoplay',''); video.muted = true;
+        video.srcObject = stream; video.onloadedmetadata=async()=>{ try{ await video.play(); }catch(e){ console.warn('autoplay blocked', e);} };
         video.style.display=""; preview.style.display="none";
-        btnSnap.disabled=false;
-      }catch(err){ alert("Camera not available. Please allow permission and HTTPS."); console.error(err); }
+        btnSnap.disabled=false; btnStop.disabled=false; camWarn.style.display='none'; camWarn.textContent='';
+      }catch(err){
+        camWarn.style.display='block';
+        camWarn.textContent = (err && err.name==='NotAllowedError') ? 'Permission denied. Please allow camera access.' : `Camera error: ${err && err.message || 'Unknown'}`;
+        console.error(err);
+      }
     }
+    function stopCam(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } btnSnap.disabled=true; btnStop.disabled=true; video.style.display="none"; }
 
     function snap(){
       if (!video.videoWidth) return;
@@ -234,192 +277,119 @@
       const dataUrl=c.toDataURL('image/jpeg',.92);
       preview.src=dataUrl; preview.style.display=""; video.style.display="none";
       setSelected(dataUrl);
-      // Capture -> Retake
-      btnSnap.textContent = 'Retake'; btnSnap.dataset.mode='retake';
     }
 
-    btnStart.onclick=startCam;
-    btnSnap.onclick=()=>{
-      if(btnSnap.dataset.mode==='retake'){
-        preview.style.display='none'; video.style.display=''; btnSnap.textContent='Capture'; btnSnap.dataset.mode='capture'; return;
-      }
-      snap();
-    };
-
+    btnStart.onclick=startCam; btnStop.onclick=stopCam; btnSnap.onclick=snap;
     if (file){ file.onchange = async (ev)=>{ const f=ev.target.files?.[0]; if(!f) return; setSelected(await toDataURLFromFile(f)); }; }
+    btnClear.onclick = ()=> setSelected("");
 
     /* ---------- Search + Pagination ---------- */
-    let allResults = [];
-    let currentPage = 1;
+    let allResults = []; let currentPage = 1;
     function pageSize(){ return Number(pageSizeSel.value)||24; }
 
     function updatePager(){
-      const total = allResults.length;
-      const ps = pageSize();
-      const totalPages = Math.max(1, Math.ceil(total / ps));
+      const total = allResults.length; const ps = pageSize(); const totalPages = Math.max(1, Math.ceil(total / ps));
       if (currentPage > totalPages) currentPage = totalPages;
-      pageBadge.textContent = `${currentPage} / ${totalPages}`;
-      countBadge.textContent = `${total} results`;
-      btnPrev.disabled = (currentPage<=1);
-      btnNext.disabled = (currentPage>=totalPages);
-      const anySel = resultsEl.querySelectorAll('.tile.selected').length>0;
-      btnDownloadSel.disabled = !anySel;
-      // Toggle-all label
-      const tiles = resultsEl.querySelectorAll('.tile');
-      const allSelected = tiles.length>0 && [...tiles].every(t=>t.classList.contains('selected'));
-      btnToggleAll.textContent = allSelected ? 'Unselect all' : 'Select all';
+      pageBadge.textContent = `${currentPage} / ${totalPages}`; countBadge.textContent = `${total} results`;
+      btnPrev.disabled = (currentPage<=1); btnNext.disabled = (currentPage>=totalPages);
+      const anySel = document.querySelectorAll('.tile input[type=checkbox]:checked').length>0; btnDownloadSel.disabled = !anySel; btnClearSel.disabled = !anySel;
     }
 
     function renderPage(){
-      const ps = pageSize();
-      const start = (currentPage-1)*ps;
-      const slice = allResults.slice(start, start+ps);
-
-      resultsEl.innerHTML = slice.map((x,i)=>`
-        <div class="tile" data-idx="${start+i}">
-          <span class="check-badge">✓</span>
-          <img src="${x.downloadUrl||''}" alt="match"/>
-          <button class="dl" title="Download" data-url="${x.downloadUrl||''}">⬇︎</button>
-        </div>
-      `).join("");
+      const ps = pageSize(); const start = (currentPage-1)*ps; const slice = allResults.slice(start, start+ps);
+      resultsEl.innerHTML = slice.map((x,i)=>`<div class="tile" data-idx="${start+i}"><input type="checkbox" aria-label="select image"/><img src="${x.downloadUrl||''}" alt="match" data-zoom="${x.downloadUrl||''}" /></div>`).join("");
       resultsEl.style.display = slice.length ? "" : "none";
+      resultsEl.querySelectorAll('.tile input[type=checkbox]').forEach(cb=>{ cb.addEventListener('change',()=>{ cb.closest('.tile').classList.toggle('selected', cb.checked); updatePager(); });});
+      resultsEl.querySelectorAll('.tile img').forEach(img=> img.addEventListener('click',()=> openLightbox(Number(img.closest('.tile').dataset.idx))));
       updatePager();
     }
-
-    // Event delegation for grid
-    resultsEl.addEventListener('click', async (e)=>{
-      const tile = e.target.closest('.tile');
-      if(!tile) return;
-      if(e.target.closest('.dl')){ // per-photo download
-        const url = e.target.getAttribute('data-url');
-        if(url) try{ await forceDownload(url); }catch(err){ console.warn('download failed', url, err); }
-        return;
-      }
-      if(e.target.tagName==='IMG'){ // open lightbox
-        openLightbox(Number(tile.dataset.idx)); return;
-      }
-      // toggle select on tile body
-      tile.classList.toggle('selected'); updatePager();
-    });
 
     btnPrev.onclick = ()=>{ currentPage--; renderPage(); };
     btnNext.onclick = ()=>{ currentPage++; renderPage(); };
     pageSizeSel.onchange = ()=>{ currentPage=1; renderPage(); };
-
-    btnToggleAll.onclick = ()=>{
-      const tiles = [...resultsEl.querySelectorAll('.tile')];
-      const allSelected = tiles.length && tiles.every(t=> t.classList.contains('selected'));
-      tiles.forEach(t=> t.classList.toggle('selected', !allSelected));
-      updatePager();
-    };
+    btnSelectAll.onclick = ()=>{ resultsEl.querySelectorAll('.tile input[type=checkbox]').forEach(cb=>{ cb.checked=true; cb.dispatchEvent(new Event('change')); }); };
+    btnUnselectAll.onclick = ()=>{ resultsEl.querySelectorAll('.tile input[type=checkbox]').forEach(cb=>{ cb.checked=false; cb.dispatchEvent(new Event('change')); }); };
+    btnClearSel.onclick = btnUnselectAll.onclick;
 
     function fileNameFromUrl(u){ try{ return decodeURIComponent(new URL(u).pathname.split('/').pop()||'photo.jpg'); }catch{return 'photo.jpg'} }
     async function forceDownload(url){ const resp = await fetch(url,{mode:'cors'}); const blob = await resp.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileNameFromUrl(url); document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 50); }
+    btnDownloadSel.onclick = async ()=>{ const selectedUrls = [...resultsEl.querySelectorAll('.tile input:checked')].map(cb=>{ const idx = Number(cb.closest('.tile').dataset.idx); return allResults[idx]?.downloadUrl; }).filter(Boolean); for (const url of selectedUrls){ try{ await forceDownload(url); }catch(e){ console.warn('download failed', url, e); } } };
 
-    document.getElementById('btnSearch').onclick = async ()=>{
-      // Scroll to results and show toast
-      document.getElementById('resultsCard').scrollIntoView({behavior:'smooth'});
-      toast.classList.add('show');
-
-      if (!currentDataUrl){ alert("Pick/Capture a photo first."); toast.classList.remove('show'); return; }
-      if (!SEARCH_URL){ alert("API BASE is missing."); toast.classList.remove('show'); return; }
-
-      msg.textContent = "Searching..."; resultsEl.style.display="none"; resultsEl.innerHTML="";
-
+    // Robust fetch + envelope unwrapping + normalization
+    async function doSearch(){
+      if (!currentDataUrl){ alert('Pick/Capture a photo first.'); return; }
+      msg.textContent = 'Searching...'; resultsEl.style.display='none'; resultsEl.innerHTML='';
       const body = { imageBase64: currentDataUrl, threshold: THRESHOLD, maxResults: MAX_RESULTS };
       if (LINK_ID) body.linkId = LINK_ID; else body.allowedFolders = [DEFAULT_FOLDER];
 
       try{
-        const r = await fetch(SEARCH_URL, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+        const r = await fetch(SEARCH_URL, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body) });
         const text = await r.text();
-        let j = {};
-        try{ j = text ? JSON.parse(text) : {}; }catch(parseErr){ j = { __raw:text }; }
+        let j = {}; try{ j = text ? JSON.parse(text) : {}; }catch{ j = { __raw:text }; }
 
-        // Unwrap common API Gateway envelope: {statusCode, headers, body}
-        function unwrapApiGw(obj){
-          try{
-            // base64 body
-            if(obj && obj.isBase64Encoded && typeof obj.body==='string'){
-              try{ const decoded = atob(obj.body); obj = JSON.parse(decoded); }catch(_){ /* ignore */ }
-            }
-            // nested string body (may be wrapped multiple times)
-            let guard = 0;
-            while(obj && typeof obj==='object' && typeof obj.body==='string' && guard++ < 3){
-              try{ obj = JSON.parse(obj.body); }catch(e){ break; }
-            }
-          }catch(_){ /* ignore */ }
-          return obj;
-        }
-        j = unwrapApiGw(j);
+        // unwrap API Gateway envelopes and nested body/base64
+        function unwrap(obj){ try{
+          if(obj && obj.isBase64Encoded && typeof obj.body==='string') { try{ obj = JSON.parse(atob(obj.body)); }catch(_){ /* ignore */ } }
+          let guard=0; while(obj && typeof obj==='object' && typeof obj.body==='string' && guard++<3){ try{ obj = JSON.parse(obj.body); }catch(e){ break; } }
+        }catch(_){ } return obj; }
+        j = unwrap(j);
 
-        if (!r.ok){ msg.innerHTML = `<div class="error">Server Error (${r.status}).</div>`; console.warn(j); toast.classList.remove('show'); return; }
+        if (!r.ok){ msg.innerHTML = `<div class="error">Server Error (${r.status}).</div>`; console.warn(j); return; }
 
-        // Normalize various possible shapes => array of {downloadUrl}
-        function pickUrl(o){ return o.downloadUrl||o.url||o.signedUrl||o.imageUrl||o.src||o.link||""; }
-        function toArray(x){ if(Array.isArray(x)) return x; if(!x) return []; return Object.values(x); }
+        // normalize array
+        function pickUrl(o){ return o.downloadUrl||o.url||o.signedUrl||o.imageUrl||o.src||o.link||''; }
         let arr = [];
-        if(Array.isArray(j.results)) arr = j.results;
-        else if(Array.isArray(j.photos)) arr = j.photos;
-        else if(Array.isArray(j.items)) arr = j.items;
-        else if(j.data && Array.isArray(j.data.results)) arr = j.data.results;
-        else if(j.body && Array.isArray(j.body.results)) arr = j.body.results;
-        else if(j.matches && Array.isArray(j.matches)) arr = j.matches;
-        else if(j.images && Array.isArray(j.images)) arr = j.images;
-        else if(typeof j === 'object' && Object.keys(j).length && Array.isArray(j[Object.keys(j)[0]])) arr = j[Object.keys(j)[0]]; // fallback first array field
+        if(Array.isArray(j.results)) arr=j.results; else if(Array.isArray(j.photos)) arr=j.photos; else if(Array.isArray(j.items)) arr=j.items;
+        else if(j.data && Array.isArray(j.data.results)) arr=j.data.results; else if(j.body && Array.isArray(j.body.results)) arr=j.body.results;
+        else if(Array.isArray(j.matches)) arr=j.matches; else if(Array.isArray(j.images)) arr=j.images;
+        else if(typeof j==='object' && j){ const firstKey = Object.keys(j).find(k=> Array.isArray(j[k])); if(firstKey) arr = j[firstKey]; }
 
-        if(!arr || !arr.length){
-          const keys = j && typeof j==='object' ? Object.keys(j).join(', ') : typeof j;
-          msg.innerHTML = `<div class="error">Unexpected response. Keys: ${keys || 'none'}</div>`;
-          console.warn('Unexpected response shape', j);
-          toast.classList.remove('show');
-          return;
-        }
+        if(!arr || !arr.length){ const keys = j && typeof j==='object' ? Object.keys(j).join(', ') : typeof j; msg.innerHTML = `<div class="error">Unexpected response. Keys: ${keys||'none'}</div>`; console.warn('Unexpected response shape', j); return; }
 
-        // map to unified structure
         arr = arr.map(it=> ({ downloadUrl: pickUrl(it), ...it })).filter(x=> !!x.downloadUrl);
-
-        // De-duplicate by canonical URL (origin+pathname)
+        // de-dup by origin+pathname
         const canon = (u)=>{ try{ const x=new URL(u); return x.origin + x.pathname.toLowerCase(); }catch{return (u||'').toLowerCase(); } };
         const seen = new Set();
-        allResults = arr.filter(it=>{ const k = canon(it.downloadUrl||''); if(seen.has(k)) return false; seen.add(k); return true; });
+        allResults = arr.filter(it=>{ const k=canon(it.downloadUrl||''); if(seen.has(k)) return false; seen.add(k); return true; });
 
-        if (j.count && j.count > allResults.length){
-          msg.innerHTML = `<div class="okmsg">Found: ${j.count}. Showing unique: ${allResults.length}. Need more? add <b>?max=500</b> in URL.</div>`;
-        } else {
-          msg.innerHTML = `<div class="okmsg">${allResults.length} unique matches.</div>`;
-        }
-        currentPage = 1; renderPage();
-        // Focus results and hide toast
-        resultsEl.scrollIntoView({behavior:'smooth'});
-        toast.classList.remove('show');
-      }catch(err){
-        console.error(err);
-        msg.innerHTML = `<div class="error">Network/JSON error.</div>`;
-        toast.classList.remove('show');
-      }
-    };
+        msg.innerHTML = `<div class="okmsg">${allResults.length} unique matches.</div>`;
+        currentPage=1; renderPage();
+      }catch(err){ console.error(err); msg.innerHTML = `<div class="error">Network/JSON error.</div>`; }
+    }
 
-    /* ---------- Lightbox ---------- */
+    btnSearch.onclick = doSearch;
+
+    // ---------- Lightbox ----------
     let lbIndex = -1;
-    const lightbox = document.getElementById('lightbox');
-    const lightImg = document.getElementById('lightImg');
-    const lbClose  = document.getElementById('lbClose');
-    const lbPrev   = document.getElementById('lbPrev');
-    const lbNext   = document.getElementById('lbNext');
-
-    function openLightbox(globalIdx){ lbIndex = globalIdx; updateLightbox(); lightbox.classList.add('show'); }
-    function closeLightbox(){ lightbox.classList.remove('show'); lightImg.src = ""; }
+    function openLightbox(globalIdx){ lbIndex = globalIdx; updateLightbox(); document.body.classList.add('zooming'); lightbox.classList.add('show'); lightbox.setAttribute('aria-hidden','false'); }
+    function closeLightbox(){ lightbox.classList.remove('show'); document.body.classList.remove('zooming'); lightbox.setAttribute('aria-hidden','true'); lightImg.src = ""; }
     function updateLightbox(){ const item = allResults[lbIndex]; if (!item){ closeLightbox(); return; } lightImg.src = item.downloadUrl || ""; }
     function step(delta){ const total = allResults.length; if (!total) return; lbIndex = (lbIndex + delta + total) % total; updateLightbox(); }
-
-    lbClose.onclick = closeLightbox;
-    lbPrev.onclick = ()=> step(-1);
-    lbNext.onclick = ()=> step(+1);
+    lbClose.onclick = closeLightbox; lbPrev.onclick  = ()=> step(-1); lbNext.onclick  = ()=> step(+1);
     lightbox.addEventListener('click',(e)=>{ if(e.target===lightbox) closeLightbox(); });
     window.addEventListener('keydown',(e)=>{ if(!lightbox.classList.contains('show')) return; if(e.key==='Escape') closeLightbox(); if(e.key==='ArrowLeft') step(-1); if(e.key==='ArrowRight') step(+1); });
 
-    // init: auto-open camera when possible
-    (function(){ startCam(); })();
+    // ---------- Dev/Test (manual tests) ----------
+    (function(){
+      if(qs.get('debug')==='1'){
+        const dev=document.getElementById('dev'); const log=document.getElementById('devLog'); dev.style.display='block';
+        function show(x){ log.textContent = typeof x==='string'? x : JSON.stringify(x,null,2); }
+        document.getElementById('tEnvelope').onclick=()=>{
+          const fake={ statusCode:200, headers:{}, body: JSON.stringify({ results:[{ downloadUrl:'https://example.com/a.jpg' },{ downloadUrl:'https://example.com/b.jpg' }] }) };
+          const text=JSON.stringify(fake); let j={}; try{ j=JSON.parse(text);}catch{}
+          // reuse unwrap/normalize used in doSearch
+          function unwrap(obj){ try{ let guard=0; while(obj && typeof obj==='object' && typeof obj.body==='string' && guard++<3){ try{ obj = JSON.parse(obj.body); }catch(e){ break; } } }catch(_){ } return obj; }
+          j=unwrap(j); show(j);
+        };
+        document.getElementById('tAltKeys').onclick=()=>{
+          const fake={ images:[ { imageUrl:'https://example.com/x.jpg' }, { imageUrl:'https://example.com/x.jpg?size=large' }, { url:'https://example.com/y.jpg' } ] };
+          show(fake);
+        };
+      }
+    })();
+
+    // init
+    (function(){ selected.src=""; })();
   </script>
 </body>
 </html>
