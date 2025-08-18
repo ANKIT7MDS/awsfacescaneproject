@@ -331,15 +331,40 @@
 
       try{
         const r = await fetch(SEARCH_URL, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
-        const j = await r.json().catch(()=> ({}));
+        const text = await r.text();
+        let j = {};
+        try{ j = text ? JSON.parse(text) : {}; }catch(parseErr){ j = { __raw:text }; }
 
         if (!r.ok){ msg.innerHTML = `<div class="error">Server Error (${r.status}).</div>`; console.warn(j); toast.classList.remove('show'); return; }
-        if (!j || !Array.isArray(j.results)){ msg.innerHTML = `<div class="error">Unexpected response.</div>`; console.warn(j); toast.classList.remove('show'); return; }
+
+        // Normalize various possible shapes => array of {downloadUrl}
+        function pickUrl(o){ return o.downloadUrl||o.url||o.signedUrl||o.imageUrl||o.src||o.link||""; }
+        function toArray(x){ if(Array.isArray(x)) return x; if(!x) return []; return Object.values(x); }
+        let arr = [];
+        if(Array.isArray(j.results)) arr = j.results;
+        else if(Array.isArray(j.photos)) arr = j.photos;
+        else if(Array.isArray(j.items)) arr = j.items;
+        else if(j.data && Array.isArray(j.data.results)) arr = j.data.results;
+        else if(j.body && Array.isArray(j.body.results)) arr = j.body.results;
+        else if(j.matches && Array.isArray(j.matches)) arr = j.matches;
+        else if(j.images && Array.isArray(j.images)) arr = j.images;
+        else if(typeof j === 'object' && Object.keys(j).length && Array.isArray(j[Object.keys(j)[0]])) arr = j[Object.keys(j)[0]]; // fallback first array field
+
+        if(!arr || !arr.length){
+          const keys = j && typeof j==='object' ? Object.keys(j).join(', ') : typeof j;
+          msg.innerHTML = `<div class="error">Unexpected response. Keys: ${keys || 'none'}</div>`;
+          console.warn('Unexpected response shape', j);
+          toast.classList.remove('show');
+          return;
+        }
+
+        // map to unified structure
+        arr = arr.map(it=> ({ downloadUrl: pickUrl(it), ...it })).filter(x=> !!x.downloadUrl);
 
         // De-duplicate by canonical URL (origin+pathname)
         const canon = (u)=>{ try{ const x=new URL(u); return x.origin + x.pathname.toLowerCase(); }catch{return (u||'').toLowerCase(); } };
         const seen = new Set();
-        allResults = (j.results||[]).filter(it=>{ const k = canon(it.downloadUrl||''); if(seen.has(k)) return false; seen.add(k); return true; });
+        allResults = arr.filter(it=>{ const k = canon(it.downloadUrl||''); if(seen.has(k)) return false; seen.add(k); return true; });
 
         if (j.count && j.count > allResults.length){
           msg.innerHTML = `<div class="okmsg">Found: ${j.count}. Showing unique: ${allResults.length}. Need more? add <b>?max=500</b> in URL.</div>`;
