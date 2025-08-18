@@ -76,9 +76,8 @@
     </header>
 
     <div class="row">
-      <!-- Left: Inline Camera / File pick -->
       <section class="card">
-        <div class="h1">सेल्फी लें (पॉपअप नहीं)</div>
+        <div class="h1">सेल्फी लें और यहीं से सर्च करें</div>
         <div class="media" id="mediaBox">
           <video id="video" playsinline></video>
           <img id="preview" alt="preview" style="display:none" />
@@ -94,33 +93,19 @@
             </svg>
           </div>
         </div>
-
         <div class="stack" style="margin:12px 0 6px">
           <button class="btn ghost" id="btnStart">Open Camera</button>
           <button class="btn ghost" id="btnSnap" disabled>Capture</button>
           <button class="btn ghost" id="btnStop" disabled>Stop</button>
-          <!-- यहीं सर्च बटन रखें -->
           <button class="btn primary" id="btnSearch" disabled>Search</button>
+          <button class="btn ghost" id="btnClear">Clear</button>
+          <span class="pill" id="cfgInfo"></span>
         </div>
-
         <div id="fileRow" class="stack" style="margin-top:6px">
           <input type="file" id="file" accept="image/*" multiple />
           <span class="note">* मोबाइल पर यह छिपा रहेगा – कैमरा से सेल्फी लें</span>
         </div>
-      </section>
-
-      <!-- Right: Selected preview + info -->
-      <section class="card">
-        <div class="stack" style="justify-content:space-between">
-          <div class="h1">Selected Photo <span class="pill muted">latest</span></div>
-          <span class="pill" id="folderInfo">folder: link</span>
-        </div>
-        <div class="media"><img id="selected" alt="selected" /></div>
-        <div class="stack" style="margin:12px 0 6px">
-          <button class="btn ghost" id="btnClear">Clear</button>
-          <span class="pill" id="cfgInfo"></span>
-        </div>
-        <div class="note">API: <input id="apiField" type="text" readonly /></div>
+        <div class="note" style="margin-top:8px">API: <input id="apiField" type="text" readonly /> <span class="pill" id="folderInfo" style="margin-left:8px">folder: link</span></div>
       </section>
     </div>
 
@@ -172,7 +157,7 @@
     /* ---------- DOM ---------- */
     const video   = document.getElementById('video');
     const preview = document.getElementById('preview');
-    const selected= document.getElementById('selected');
+    /* removed selected preview */
     const file    = document.getElementById('file');
     const btnStart= document.getElementById('btnStart');
     const btnSnap = document.getElementById('btnSnap');
@@ -203,7 +188,7 @@
 
     function setSelected(dataUrl){
       currentDataUrl = dataUrl || "";
-      selected.src = dataUrl || "";
+      /* no inline selected preview */
       btnSearch.disabled = !dataUrl || !BASE;
     }
     function toDataURLFromFile(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f);}); }
@@ -310,11 +295,15 @@
         if (!r.ok){ msg.innerHTML = `<div class="error">Server Error (${r.status}).</div>`; console.warn(j); return; }
         if (!j || !Array.isArray(j.results)){ msg.innerHTML = `<div class="error">Unexpected response.</div>`; console.warn(j); return; }
 
-        allResults = j.results || [];
+        // de-duplicate results on frontend by canonical URL path (ignores query/size params)
+        const canon = (u)=>{ try{ const x=new URL(u); return x.origin + x.pathname.toLowerCase(); }catch{ return (u||'').toLowerCase(); } };
+        const seen = new Set();
+        allResults = (j.results||[]).filter(it=>{ const k = canon(it.downloadUrl||''); if(seen.has(k)) return false; seen.add(k); return true; });
+
         if (j.count && j.count > allResults.length){
-          msg.innerHTML = `<div class="okmsg">Found: ${j.count}. Showing: ${allResults.length}. Need more? add <b>?max=500</b> in URL.</div>`;
+          msg.innerHTML = `<div class="okmsg">Found: ${j.count}. Showing unique: ${allResults.length}. Need more? add <b>?max=500</b> in URL.</div>`;
         } else {
-          msg.innerHTML = `<div class="okmsg">${allResults.length} matches.</div>`;
+          msg.innerHTML = `<div class="okmsg">${allResults.length} unique matches.</div>`;
         }
         currentPage = 1; renderPage();
 
