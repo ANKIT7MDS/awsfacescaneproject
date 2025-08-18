@@ -178,7 +178,7 @@
     const btnClearSel = document.getElementById('btnClearSel');
 
     apiField.value = BASE || "(missing)";
-    cfgInfo.textContent = LINK_ID ? `linkId: ${LINK_ID}, max=${MAX_RESULTS}` : `folder: ${DEFAULT_FOLDER}, max=${MAX_RESULTS}`;
+    cfgInfo.textContent = LINK_ID && LINK_ID !== '' ? `linkId: ${LINK_ID}, max=${MAX_RESULTS}` : `folder: ${DEFAULT_FOLDER}, max=${MAX_RESULTS}`;
     folderInfo.textContent = LINK_ID ? "folder: link" : `folder: ${DEFAULT_FOLDER}`;
 
     /* ---------- Camera (inline) ---------- */
