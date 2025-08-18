@@ -3,18 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Selfie Search – FotoOwl style</title>
+  <title>Selfie Search – Inline Camera (FotoOwl‑like)</title>
   <style>
     :root{
       --bg:#fff8f1;--panel:#ffffff;--text:#1e1b16;--muted:#6b7280;--line:#f1e6d8;
-      --brand:#ff2c2c;       /* primary red like FotoOwl capture btn */
-      --brand2:#ff6a6a;      /* lighter red */
-      --ok:#16a34a;--okbg:#0f172a;--okring:#22c55e;
+      --brand:#ff2c2c;--brand2:#ff6a6a;--ok:#16a34a;
       --chip:#fff1e0;--shadow:0 8px 24px rgba(255,0,0,.18)
     }
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
-    body.modal-open{overflow:hidden}
     .wrap{max-width:1120px;margin-inline:auto;padding:18px}
     header{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
     .title{font-size:24px;font-weight:800;color:#111827}
@@ -32,50 +29,35 @@
     .btn.bad{background:#ffe4e6;color:#9f1239;border:1px solid #fecdd3}
     .btn.ok{background:#dcfce7;color:#14532d;border:1px solid #bbf7d0}
     .stack{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .media{aspect-ratio:4/3;background:#fff;border:1px dashed var(--line);border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+
+    /* --- Inline camera box (no popup) --- */
+    .media{aspect-ratio:1/1;background:#000;border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
     .media video,.media img{width:100%;height:100%;object-fit:cover}
-    .note{font-size:12px;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:10px}
-    .tile{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px;position:relative}
-    .tile img{width:100%;height:220px;object-fit:cover;border-radius:10px}
+    .ring{position:absolute;inset:10px;border-radius:999px;border:2px dashed rgba(255,255,255,.28);pointer-events:none}
+    .mesh{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+    .mesh svg{width:64%;opacity:.9}
+
+    /* Results grid — tight, no extra space */
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:10px}
+    .tile{background:#fff;border:1px solid var(--line);border-radius:12px;position:relative;overflow:hidden}
+    .tile img{display:block;width:100%;height:230px;object-fit:cover}
+
+    /* selection: no checkboxes initially; appear only after select */
+    .check-badge{position:absolute;top:8px;left:8px;background:#10b981;color:#062e24;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:800;display:none}
+    .tile.selected .check-badge{display:inline-block}
+    .tile.selected{outline:3px solid #10b981;outline-offset:-3px}
+
     .sticky-bar{position:sticky;bottom:0;z-index:5;background:#fffbeccc;backdrop-filter:blur(6px);padding:10px;border:1px solid var(--line);border-radius:12px;margin-top:12px}
 
-    /* --- Selfie Modal (FotoOwl-like) --- */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;z-index:40}
-    .modal.show{display:grid;place-items:center}
-    .modal-card{width:min(520px,92vw);background:#0f1115;border-radius:18px;color:#e5e7eb;box-shadow:0 25px 60px rgba(0,0,0,.55);padding:18px 18px 22px}
-    .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-    .modal-title{font-weight:800;letter-spacing:.3px}
-    .modal-close{background:transparent;border:0;color:#9ca3af;font-size:20px;cursor:pointer}
+    .note{font-size:12px;color:var(--muted)}
+    .error{border-left:4px solid #ef4444;background:#fff1f2;padding:10px 12px;border-radius:10px;color:#7f1d1d}
+    .okmsg{border-left:4px solid #16a34a;background:#ecfdf5;padding:10px 12px;border-radius:10px;color:#064e3b}
 
-    .cam-wrap{position:relative;display:grid;place-items:center;margin:12px 0 10px}
-    .cam{width:320px;height:320px;border-radius:999px;overflow:hidden;display:grid;place-items:center;background:#000}
-    .cam video,.cam img{width:100%;height:100%;object-fit:cover;filter:saturate(1.05)}
-
-    /* circular mask ring + dotted progress like FotoOwl */
-    .ring{position:absolute;width:340px;height:340px;border-radius:999px;pointer-events:none}
-    .ring::before{content:"";position:absolute;inset:0;border-radius:999px;border:2px dashed rgba(255,255,255,.28);animation:spin 12s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-
-    /* face mesh (decorative SVG) */
-    .mesh{position:absolute;width:260px;height:260px;pointer-events:none;opacity:.85}
-
-    .modal-actions{display:flex;justify-content:center;gap:10px;margin-top:10px}
-    .btn.capture{background:var(--brand);color:#fff;border-radius:10px;padding:12px 18px}
-    .btn.retake{background:#111827;color:#fff;border:1px solid #374151}
-    .btn.done{background:#0ea5e9;color:#06243a}
-
-    .verify{display:flex;align-items:center;gap:8px;font-weight:700;color:#a7f3d0;margin:6px 0}
-    .verify .dot{width:10px;height:10px;border-radius:999px;background:var(--okring);box-shadow:0 0 0 6px rgba(34,197,94,.18)}
-
-    /* small form styles (name/email/phone + consent) */
-    .form{display:grid;gap:10px;margin-top:8px}
-    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .field{background:#111827;border:1px solid #374151;border-radius:10px;padding:10px;color:#e5e7eb}
-    .consent{display:flex;gap:8px;align-items:flex-start;color:#cbd5e1;font-size:13px}
+    /* मोबाइल पर file input छिपाएँ */
+    @media (max-width:640px){ #fileRow{display:none} }
   </style>
 
-  <!-- CONFIG (kept same as your file) -->
+  <!-- CONFIG -->
   <script>
     window.API = {
       BASE: "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search",
@@ -94,50 +76,58 @@
     </header>
 
     <div class="row">
-      <!-- Left: Camera / File pick -->
+      <!-- Left: Inline Camera / File pick -->
       <section class="card">
-        <div class="h1">फोटो चुनें या कैमरा से कैप्चर</div>
-
+        <div class="h1">सेल्फी लें (पॉपअप नहीं)</div>
         <div class="media" id="mediaBox">
           <video id="video" playsinline></video>
           <img id="preview" alt="preview" style="display:none" />
+          <div class="ring"></div>
+          <div class="mesh" aria-hidden="true">
+            <svg viewBox="0 0 100 100">
+              <g fill="none" stroke="rgba(255,200,0,.9)" stroke-width=".6">
+                <polygon points="20,30 50,15 80,30 85,55 50,90 15,55"/>
+                <polyline points="20,30 50,50 80,30"/>
+                <polyline points="15,55 50,70 85,55"/>
+                <polyline points="50,15 50,70 50,90"/>
+              </g>
+            </svg>
+          </div>
         </div>
 
-        <div class="stack" style="margin:12px 0 8px">
-          <button class="btn ghost" id="btnOpenModal">📷 Open Camera</button>
+        <div class="stack" style="margin:12px 0 6px">
+          <button class="btn ghost" id="btnStart">Open Camera</button>
+          <button class="btn ghost" id="btnSnap" disabled>Capture</button>
           <button class="btn ghost" id="btnStop" disabled>Stop</button>
+          <!-- यहीं सर्च बटन रखें -->
+          <button class="btn primary" id="btnSearch" disabled>Search</button>
         </div>
 
         <div id="fileRow" class="stack" style="margin-top:6px">
           <input type="file" id="file" accept="image/*" multiple />
-          <span class="note">* मोबाइल पर कैमरा पॉप‑अप से सेल्फी लें</span>
+          <span class="note">* मोबाइल पर यह छिपा रहेगा – कैमरा से सेल्फी लें</span>
         </div>
       </section>
 
-      <!-- Right: Selected + Search -->
+      <!-- Right: Selected preview + info -->
       <section class="card">
         <div class="stack" style="justify-content:space-between">
           <div class="h1">Selected Photo <span class="pill muted">latest</span></div>
           <span class="pill" id="folderInfo">folder: link</span>
         </div>
-
         <div class="media"><img id="selected" alt="selected" /></div>
-
         <div class="stack" style="margin:12px 0 6px">
-          <button class="btn primary" id="btnSearch" disabled>Search</button>
           <button class="btn ghost" id="btnClear">Clear</button>
           <span class="pill" id="cfgInfo"></span>
         </div>
-
-        <div class="note">API:
-          <input id="apiField" type="text" readonly />
-        </div>
+        <div class="note">API: <input id="apiField" type="text" readonly /></div>
       </section>
     </div>
 
     <!-- Results -->
     <section class="card" style="margin-top:16px">
       <div class="h1">Results</div>
+
       <div class="stack" style="align-items:center;justify-content:space-between;margin-bottom:10px">
         <div class="stack">
           <label class="pill">Page size
@@ -153,8 +143,10 @@
           <button class="btn ghost" id="btnNext" disabled>Next ▶︎</button>
         </div>
       </div>
+
       <div id="msg" class="note">No search yet.</div>
       <div id="results" class="grid" style="display:none"></div>
+
       <div class="sticky-bar stack" style="justify-content:space-between;margin-top:12px">
         <div class="stack">
           <button class="btn ghost" id="btnSelectAll">Select all in page</button>
@@ -168,53 +160,6 @@
     </section>
   </div>
 
-  <!-- Selfie Modal -->
-  <div id="selfieModal" class="modal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true">
-      <div class="modal-head">
-        <div class="modal-title" id="modalTitle">Capture Selfie</div>
-        <button class="modal-close" id="modalClose">✕</button>
-      </div>
-
-      <div class="cam-wrap">
-        <div class="ring"></div>
-        <div class="cam">
-          <video id="mVideo" playsinline></video>
-          <img id="mPreview" alt="selfie" style="display:none" />
-        </div>
-        <!-- decorative mesh (SVG) -->
-        <svg class="mesh" viewBox="0 0 100 100" aria-hidden="true">
-          <g fill="none" stroke="rgba(255,200,0,.9)" stroke-width=".6">
-            <polygon points="20,30 50,15 80,30 85,55 50,90 15,55"/>
-            <polyline points="20,30 50,50 80,30"/>
-            <polyline points="15,55 50,70 85,55"/>
-            <polyline points="50,15 50,70 50,90"/>
-          </g>
-        </svg>
-      </div>
-
-      <div id="captureHint" class="note" style="text-align:center;margin-top:2px">Keep face in the center and press Capture</div>
-      <div id="verifyBar" class="verify" style="display:none"><span class="dot"></span> Selfie Verified</div>
-
-      <div class="modal-actions" id="captureBtns">
-        <button class="btn capture" id="btnCapture">📸 Capture</button>
-      </div>
-      <div class="modal-actions" id="verifyBtns" style="display:none">
-        <button class="btn retake" id="btnRetake">Retake</button>
-        <button class="btn ok" id="btnDone">✓ Done</button>
-      </div>
-
-      <div class="form" style="margin-top:12px">
-        <div class="row2">
-          <input class="field" id="fName" placeholder="Name"/>
-          <input class="field" id="fEmail" placeholder="Email"/>
-        </div>
-        <input class="field" id="fPhone" placeholder="Mobile Number"/>
-        <label class="consent"><input type="checkbox" id="fConsent"/> <span>I Agree to the Privacy Policy and give my Consent</span></label>
-      </div>
-    </div>
-  </div>
-
   <script>
     /* ---------- Config ---------- */
     const qs = new URLSearchParams(location.search);
@@ -225,8 +170,13 @@
     const MAX_RESULTS = Number(qs.get("max")) || (window.API && window.API.MAX_RESULTS) || 200;
 
     /* ---------- DOM ---------- */
-    const selected = document.getElementById('selected');
-    const file = document.getElementById('file');
+    const video   = document.getElementById('video');
+    const preview = document.getElementById('preview');
+    const selected= document.getElementById('selected');
+    const file    = document.getElementById('file');
+    const btnStart= document.getElementById('btnStart');
+    const btnSnap = document.getElementById('btnSnap');
+    const btnStop = document.getElementById('btnStop');
     const btnSearch = document.getElementById('btnSearch');
     const btnClear  = document.getElementById('btnClear');
     const apiField  = document.getElementById('apiField');
@@ -244,85 +194,84 @@
     const btnDownloadSel = document.getElementById('btnDownloadSel');
     const btnClearSel = document.getElementById('btnClearSel');
 
-    // Modal elements
-    const modal = document.getElementById('selfieModal');
-    const modalClose = document.getElementById('modalClose');
-    const btnOpenModal = document.getElementById('btnOpenModal');
-    const mVideo = document.getElementById('mVideo');
-    const mPreview = document.getElementById('mPreview');
-    const btnCapture = document.getElementById('btnCapture');
-    const btnRetake = document.getElementById('btnRetake');
-    const btnDone = document.getElementById('btnDone');
-    const verifyBar = document.getElementById('verifyBar');
-    const captureBtns = document.getElementById('captureBtns');
-    const verifyBtns = document.getElementById('verifyBtns');
-
     apiField.value = BASE || "(missing)";
     cfgInfo.textContent = LINK_ID ? `linkId: ${LINK_ID}, max=${MAX_RESULTS}` : `folder: ${DEFAULT_FOLDER}, max=${MAX_RESULTS}`;
     folderInfo.textContent = LINK_ID ? "folder: link" : `folder: ${DEFAULT_FOLDER}`;
 
-    let currentDataUrl = "";  // sent to search
+    /* ---------- Camera (inline) ---------- */
+    let stream = null, currentDataUrl = "";  // यही dataUrl search में जाएगा
 
     function setSelected(dataUrl){
       currentDataUrl = dataUrl || "";
       selected.src = dataUrl || "";
       btnSearch.disabled = !dataUrl || !BASE;
     }
-
     function toDataURLFromFile(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f);}); }
 
-    // Desktop file input
+    async function startCam(){
+      if (stream) return;
+      try{
+        stream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:"user"}, audio:false });
+        video.srcObject = stream; video.onloadedmetadata=()=>video.play();
+        video.style.display=""; preview.style.display="none";
+        btnSnap.disabled=false; btnStop.disabled=false;
+      }catch{ alert("Camera not available. Please allow permission."); }
+    }
+    function stopCam(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } btnSnap.disabled=true; btnStop.disabled=true; video.style.display="none"; }
+
+    function snap(){
+      if (!video.videoWidth) return;
+      const c=document.createElement('canvas'); c.width=video.videoWidth; c.height=video.videoHeight;
+      c.getContext('2d').drawImage(video,0,0,c.width,c.height);
+      const dataUrl=c.toDataURL('image/jpeg',.92);
+      preview.src=dataUrl; preview.style.display=""; video.style.display="none";
+      setSelected(dataUrl);  // तुरंत यहीं select
+    }
+
+    btnStart.onclick=startCam; btnStop.onclick=stopCam; btnSnap.onclick=snap;
+
     if (file){ file.onchange = async (ev)=>{ const f=ev.target.files?.[0]; if(!f) return; setSelected(await toDataURLFromFile(f)); }; }
     btnClear.onclick = ()=> setSelected("");
 
-    /* ---------- Selfie Modal Logic (FotoOwl style) ---------- */
-    let stream = null;
-    async function startModalCam(){
-      if(stream) return; try{
-        stream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:"user"}, audio:false });
-        mVideo.srcObject = stream; mVideo.onloadedmetadata=()=> mVideo.play();
-      }catch(err){ alert('Camera not available. Please allow permission.'); }
-    }
-    function stopModalCam(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } }
-
-    function openModal(){ modal.classList.add('show'); document.body.classList.add('modal-open'); mPreview.style.display='none'; mVideo.style.display='block'; verifyBar.style.display='none'; verifyBtns.style.display='none'; captureBtns.style.display='flex'; startModalCam(); }
-    function closeModal(){ modal.classList.remove('show'); document.body.classList.remove('modal-open'); stopModalCam(); }
-
-    btnOpenModal.onclick = openModal; modalClose.onclick = closeModal; modal.addEventListener('click', e=>{ if(e.target===modal) closeModal(); });
-
-    btnCapture.onclick = ()=>{
-      if (!mVideo.videoWidth) return;
-      const c=document.createElement('canvas'); c.width=mVideo.videoWidth; c.height=mVideo.videoHeight;
-      c.getContext('2d').drawImage(mVideo,0,0,c.width,c.height);
-      const dataUrl=c.toDataURL('image/jpeg',.92);
-      mPreview.src=dataUrl; mPreview.style.display='block'; mVideo.style.display='none';
-      verifyBar.style.display='flex'; captureBtns.style.display='none'; verifyBtns.style.display='flex';
-    };
-
-    btnRetake.onclick = ()=>{
-      mPreview.style.display='none'; mVideo.style.display='block';
-      verifyBar.style.display='none'; captureBtns.style.display='flex'; verifyBtns.style.display='none';
-    };
-
-    btnDone.onclick = ()=>{ setSelected(mPreview.src); closeModal(); };
-
     /* ---------- Search + Pagination ---------- */
-    let allResults = []; let currentPage = 1;
+    let allResults = [];
+    let currentPage = 1;
     function pageSize(){ return Number(pageSizeSel.value)||24; }
 
     function updatePager(){
-      const total = allResults.length; const ps = pageSize(); const totalPages = Math.max(1, Math.ceil(total / ps));
+      const total = allResults.length;
+      const ps = pageSize();
+      const totalPages = Math.max(1, Math.ceil(total / ps));
       if (currentPage > totalPages) currentPage = totalPages;
-      pageBadge.textContent = `${currentPage} / ${totalPages}`; countBadge.textContent = `${total} results`;
-      btnPrev.disabled = (currentPage<=1); btnNext.disabled = (currentPage>=totalPages);
-      const anySel = document.querySelectorAll('.tile input[type=checkbox]:checked').length>0; btnDownloadSel.disabled = !anySel; btnClearSel.disabled = !anySel;
+      pageBadge.textContent = `${currentPage} / ${totalPages}`;
+      countBadge.textContent = `${total} results`;
+      btnPrev.disabled = (currentPage<=1);
+      btnNext.disabled = (currentPage>=totalPages);
+      const anySel = resultsEl.querySelectorAll('.tile.selected').length>0;
+      btnDownloadSel.disabled = !anySel;
+      btnClearSel.disabled = !anySel;
     }
 
     function renderPage(){
-      const ps = pageSize(); const start = (currentPage-1)*ps; const slice = allResults.slice(start, start+ps);
-      resultsEl.innerHTML = slice.map((x,i)=>`<div class="tile" data-idx="${start+i}"><input type="checkbox" aria-label="select image"/><img src="${x.downloadUrl||''}" alt="match"/></div>`).join("");
+      const ps = pageSize();
+      const start = (currentPage-1)*ps;
+      const slice = allResults.slice(start, start+ps);
+
+      resultsEl.innerHTML = slice.map((x,i)=>`
+        <div class="tile" data-idx="${start+i}">
+          <span class="check-badge">✓</span>
+          <img src="${x.downloadUrl||''}" alt="match" />
+        </div>
+      `).join("");
       resultsEl.style.display = slice.length ? "" : "none";
-      resultsEl.querySelectorAll('.tile input[type=checkbox]').forEach(cb=> cb.addEventListener('change',updatePager));
+
+      // selection by clicking image/tile; checkbox badge only after selection
+      resultsEl.querySelectorAll('.tile').forEach(tile=>{
+        tile.addEventListener('click',()=>{
+          tile.classList.toggle('selected');
+          updatePager();
+        });
+      });
       updatePager();
     }
 
@@ -330,29 +279,49 @@
     document.getElementById('btnNext').onclick = ()=>{ currentPage++; renderPage(); };
     pageSizeSel.onchange = ()=>{ currentPage=1; renderPage(); };
 
-    document.getElementById('btnSelectAll').onclick = ()=>{ resultsEl.querySelectorAll('.tile input[type=checkbox]').forEach(cb=>{ cb.checked=true; cb.dispatchEvent(new Event('change')); }); };
-    document.getElementById('btnUnselectAll').onclick = ()=>{ resultsEl.querySelectorAll('.tile input[type=checkbox]').forEach(cb=>{ cb.checked=false; cb.dispatchEvent(new Event('change')); }); };
+    document.getElementById('btnSelectAll').onclick = ()=>{
+      resultsEl.querySelectorAll('.tile').forEach(t=>{ t.classList.add('selected'); }); updatePager();
+    };
+    document.getElementById('btnUnselectAll').onclick = ()=>{
+      resultsEl.querySelectorAll('.tile').forEach(t=>{ t.classList.remove('selected'); }); updatePager();
+    };
     document.getElementById('btnClearSel').onclick = document.getElementById('btnUnselectAll').onclick;
 
-    async function forceDownload(url){ const resp = await fetch(url,{mode:'cors'}); const blob = await resp.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (new URL(url)).pathname.split('/').pop()||'photo.jpg'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 50); }
-    document.getElementById('btnDownloadSel').onclick = async ()=>{ const selectedUrls = [...resultsEl.querySelectorAll('.tile input:checked')].map(cb=>{ const idx = Number(cb.closest('.tile').dataset.idx); return allResults[idx]?.downloadUrl; }).filter(Boolean); for (const url of selectedUrls){ try{ await forceDownload(url); }catch(e){ console.warn('download failed', url, e); } } };
+    function fileNameFromUrl(u){ try{ return decodeURIComponent(new URL(u).pathname.split('/').pop()||'photo.jpg'); }catch{return 'photo.jpg'} }
+    async function forceDownload(url){ const resp = await fetch(url,{mode:'cors'}); const blob = await resp.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileNameFromUrl(url); document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 50); }
+    document.getElementById('btnDownloadSel').onclick = async ()=>{
+      const selectedUrls = [...resultsEl.querySelectorAll('.tile.selected')].map(t=>{ const idx = Number(t.dataset.idx); return allResults[idx]?.downloadUrl; }).filter(Boolean);
+      for (const url of selectedUrls){ try{ await forceDownload(url); }catch(e){ console.warn("download failed", url, e); } }
+    };
 
     document.getElementById('btnSearch').onclick = async ()=>{
-      if (!currentDataUrl){ alert('Pick/Capture a photo first.'); return; }
-      if (!BASE){ alert('API BASE is missing.'); return; }
-      msg.textContent = 'Searching...'; resultsEl.style.display='none'; resultsEl.innerHTML='';
+      if (!currentDataUrl){ alert("Pick/Capture a photo first."); return; }
+      if (!BASE){ alert("API BASE is missing."); return; }
+
+      msg.textContent = "Searching..."; resultsEl.style.display="none"; resultsEl.innerHTML="";
+
       const body = { imageBase64: currentDataUrl, threshold: THRESHOLD, maxResults: MAX_RESULTS };
       if (LINK_ID) body.linkId = LINK_ID; else body.allowedFolders = [DEFAULT_FOLDER];
+
       try{
-        const r = await fetch(`${BASE}/search`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body) });
+        const r = await fetch(`${BASE}/search`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
         const j = await r.json().catch(()=> ({}));
-        if (!r.ok){ msg.innerHTML = `<div class="note" style="color:#ef4444">Server Error (${r.status}).</div>`; console.warn(j); return; }
-        if (!j || !Array.isArray(j.results)){ msg.innerHTML = `<div class="note" style="color:#ef4444">Unexpected response.</div>`; console.warn(j); return; }
+
+        if (!r.ok){ msg.innerHTML = `<div class="error">Server Error (${r.status}).</div>`; console.warn(j); return; }
+        if (!j || !Array.isArray(j.results)){ msg.innerHTML = `<div class="error">Unexpected response.</div>`; console.warn(j); return; }
+
         allResults = j.results || [];
-        if (j.count && j.count > allResults.length){ msg.innerHTML = `<div class=\"note\" style=\"color:#16a34a\">Found: ${j.count}. Showing: ${allResults.length}. Need more? add <b>?max=500</b> in URL.</div>`; }
-        else { msg.innerHTML = `<div class=\"note\" style=\"color:#16a34a\">${allResults.length} matches.</div>`; }
+        if (j.count && j.count > allResults.length){
+          msg.innerHTML = `<div class="okmsg">Found: ${j.count}. Showing: ${allResults.length}. Need more? add <b>?max=500</b> in URL.</div>`;
+        } else {
+          msg.innerHTML = `<div class="okmsg">${allResults.length} matches.</div>`;
+        }
         currentPage = 1; renderPage();
-      }catch(err){ console.error(err); msg.innerHTML = `<div class=\"note\" style=\"color:#ef4444\">Network/JSON error.</div>`; }
+
+      }catch(err){
+        console.error(err);
+        msg.innerHTML = `<div class="error">Network/JSON error.</div>`;
+      }
     };
 
     // init
