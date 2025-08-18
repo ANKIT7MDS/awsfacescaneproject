@@ -335,6 +335,23 @@
         let j = {};
         try{ j = text ? JSON.parse(text) : {}; }catch(parseErr){ j = { __raw:text }; }
 
+        // Unwrap common API Gateway envelope: {statusCode, headers, body}
+        function unwrapApiGw(obj){
+          try{
+            // base64 body
+            if(obj && obj.isBase64Encoded && typeof obj.body==='string'){
+              try{ const decoded = atob(obj.body); obj = JSON.parse(decoded); }catch(_){ /* ignore */ }
+            }
+            // nested string body (may be wrapped multiple times)
+            let guard = 0;
+            while(obj && typeof obj==='object' && typeof obj.body==='string' && guard++ < 3){
+              try{ obj = JSON.parse(obj.body); }catch(e){ break; }
+            }
+          }catch(_){ /* ignore */ }
+          return obj;
+        }
+        j = unwrapApiGw(j);
+
         if (!r.ok){ msg.innerHTML = `<div class="error">Server Error (${r.status}).</div>`; console.warn(j); toast.classList.remove('show'); return; }
 
         // Normalize various possible shapes => array of {downloadUrl}
