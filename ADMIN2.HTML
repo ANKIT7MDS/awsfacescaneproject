@@ -95,6 +95,11 @@
 </div>
 
 <script>
+<script>
+  // ... बाकी कोड से ऊपर/पास ही डाल दें
+  const ADMIN_TOKEN = 'ChangeMe_Secret_123';
+</script>
+
 /* ===== FIXED API/FOLDER ===== */
 const API_BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search";
 const URLS = { health: `${API_BASE}/health`, upload: `${API_BASE}/admin/upload` };
@@ -169,14 +174,13 @@ async function toJPEG(file){
 }
 
 /* ===== Optional Authorization header ===== */
-function authHeaders(){
-  const h = { "Content-Type":"application/json" };
-  if(el('useAuth').checked){
-    const tok = el('admTok').value.trim();
-    if(tok) h["Authorization"] = `Bearer ${tok}`;
-  }
-  return h;
+function authHeaders() {
+  return {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + ADMIN_TOKEN
+  };
 }
+
 
 /* ===== Upload (3 parallel) ===== */
 async function startUpload(){
