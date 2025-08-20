@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Selfie Search • Admin (sudhirji)</title>
+<title>Selfie Search • Admin Uploader (sudhirji)</title>
+<meta name="robots" content="noindex,nofollow">
 <style>
   :root{--bg:#0b0d10;--card:#12151a;--muted:#97a3b6;--brand:#f97316;--text:#edf2f7;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444}
-  *{box-sizing:border-box}
-  html,body{height:100%}
+  *{box-sizing:border-box} html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter}
   .wrap{max-width:1120px;margin:0 auto;padding:16px}
   .row{display:grid;gap:12px}
@@ -28,8 +28,6 @@
   progress{width:100%}
   .pill{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #1d2740;background:#0e1625;margin-right:6px}
   .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
-  .row2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  details summary{cursor:pointer}
 </style>
 </head>
 <body>
@@ -38,21 +36,12 @@
   <div class="row">
     <div class="card head">
       <div class="badges">
-        <div class="badge">Admin Panel</div>
+        <div class="badge">Admin Uploader</div>
         <div class="badge">API: <span id="apiState">checking…</span></div>
         <div class="badge">Folder: <b>sudhirji</b></div>
         <div class="badge">Session • <span id="sCount">0</span> files</div>
       </div>
-      <div class="row2">
-        <details>
-          <summary>Advanced</summary>
-          <div class="muted" style="margin-top:6px">डिफ़ॉल्ट रूप से Authorization header नहीं भेजा जाता। यदि आपका backend टोकन माँगता है, इसे ON करें।</div>
-          <label class="row2" style="margin-top:6px">
-            <input type="checkbox" id="useAuth"> Use Authorization header
-          </label>
-          <input id="admTok" class="input" placeholder="ADMIN TOKEN (optional)" style="margin-top:6px;padding:10px;border:1px solid #273148;border-radius:10px;background:#101523;color:#dbe3f0"/>
-        </details>
-      </div>
+      <div class="muted">Any format accepted • auto-convert to JPEG • duplicate auto-skip (server)</div>
     </div>
 
     <div class="grid2">
@@ -64,9 +53,6 @@
           <div class="muted">or</div>
           <div style="margin-top:6px">
             <input id="pick" type="file" accept="image/*" multiple />
-          </div>
-          <div class="muted" style="margin-top:10px">
-            Any format accepted • auto-convert to JPEG • duplicate auto-skip (server)
           </div>
         </div>
 
@@ -95,26 +81,22 @@
 </div>
 
 <script>
-<script>
-  // ... बाकी कोड से ऊपर/पास ही डाल दें
-  const ADMIN_TOKEN = 'ChangeMe_Secret_123';
-</script>
-
-/* ===== FIXED API/FOLDER ===== */
+/* ===== FIXED CONFIG ===== */
 const API_BASE = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search";
 const URLS = { health: `${API_BASE}/health`, upload: `${API_BASE}/admin/upload` };
 const FOLDER_ID = "sudhirji";
+const ADMIN_TOKEN = "ChangeMe_Secret_123"; // <- hard-coded token
 
-/* ===== Shortcuts ===== */
+/* ===== Helpers ===== */
 const el = id => document.getElementById(id);
 
-/* ===== Health check (info only) ===== */
+/* Health check (info only) */
 (async () => {
   try { const r=await fetch(URLS.health); const j=await r.json(); el('apiState').textContent = j.ok? 'OK':'error'; }
   catch { el('apiState').textContent = 'error'; }
 })();
 
-/* ===== Drag & Drop / Picker ===== */
+/* Drag & Drop / Picker */
 const drop = el('drop');
 ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault(); drop.classList.add('over');}));
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault(); drop.classList.remove('over');}));
@@ -124,7 +106,7 @@ el('pick').addEventListener('change', e=>{ addToQueue([...(e.target.files||[])])
 el('start').onclick = startUpload;
 el('clear').onclick = clearQueue;
 
-/* ===== Queue state ===== */
+/* Queue state */
 const queue=[]; let ok=0,dup=0,fail=0,done=0;
 
 function addToQueue(files){
@@ -160,7 +142,7 @@ function renderQueue(){
   });
 }
 
-/* ===== Any → JPEG (client-side) ===== */
+/* Any → JPEG */
 function fileToDataURL(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
 async function toJPEG(file){
   const dataUrl = await fileToDataURL(file);
@@ -173,16 +155,15 @@ async function toJPEG(file){
   return c.toDataURL('image/jpeg',0.92);
 }
 
-/* ===== Optional Authorization header ===== */
-function authHeaders() {
+/* Always send Authorization header */
+function authHeaders(){
   return {
-    "Content-Type": "application/json",
+    "Content-Type":"application/json",
     "Authorization": "Bearer " + ADMIN_TOKEN
   };
 }
 
-
-/* ===== Upload (3 parallel) ===== */
+/* Upload (3 parallel) */
 async function startUpload(){
   if(queue.length===0){ alert('Add some files first'); return; }
   el('bar').value=0; ok=dup=fail=done=0; renderQueue();
@@ -214,14 +195,14 @@ async function handleOne(item){
     item.state='uploading'; renderQueue();
     const r = await fetch(URLS.upload, {
       method: "POST",
-      headers: authHeaders(),                 // default: NO Authorization (जब तक Advanced ON न करें)
+      headers: authHeaders(),
       body: JSON.stringify({ folderId: FOLDER_ID, imageBase64: jpeg })
     });
 
     let j={}; try{ j = await r.json(); }catch(_){}
     if(r.status===401){
-      fail++; item.state='error'; item.note='401 Unauthorized (server needs token)';
-      el('note').textContent='⚠️ Backend 401 दे रहा है—Advanced में "Use Authorization header" ON करके सही ADMIN TOKEN भरें, या backend को बिना token allow करें.';
+      fail++; item.state='error'; item.note='401 Unauthorized (token mismatch)';
+      el('note').textContent='⚠️ Server ने 401 दिया—Authorization token जाँचें या CORS headers सही करें.';
     }else if(j.duplicate){
       dup++; item.state='done'; item.note='duplicate';
     }else if(j.ok){
