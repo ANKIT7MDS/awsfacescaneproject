@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Common Uploader — Selfie Search Admin (fast)</title>
+<style>
+  :root{
+    --bg:#0f172a; --card:#111827; --muted:#9ca3af; --text:#e5e7eb; --accent:#60a5fa;
+    --ok:#22c55e; --bad:#ef4444; --warn:#f59e0b;
+  }
+  html,body{height:100%;}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{max-width:1100px;margin:18px auto;padding:0 16px;}
+  .top{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .pill{background:#0b1220;border:1px solid #1f2937;border-radius:999px;padding:8px 12px;display:flex;gap:10px;align-items:center}
+  .tag{font-size:12px;color:var(--muted)}
+  input,button{font:inherit}
+  input[type=text],input[type=number]{background:#0b1220;border:1px solid #1f2937;border-radius:10px;padding:10px 12px;color:var(--text);outline:none;width:240px}
+  input[type=number]{width:90px;text-align:center}
+  .btn{background:var(--accent);color:#071426;border:0;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .card{background:var(--card);border:1px solid #1f2937;border-radius:14px;padding:16px}
+  .drop{border:2px dashed #334155;border-radius:14px;padding:24px;text-align:center;color:var(--muted)}
+  .drop.drag{border-color:var(--accent);color:var(--text)}
+  .h{margin:0 0 10px 0;font-size:18px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .muted{color:var(--muted)}
+  .bar{height:10px;background:#0b1220;border:1px solid #1f2937;border-radius:999px;overflow:hidden}
+  .bar>i{display:block;height:100%;background:linear-gradient(90deg,#4ade80,#22c55e);width:0%}
+  .stat{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .b{font-weight:700}
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+  .queue{max-height:320px;overflow:auto;border-top:1px solid #1f2937;margin-top:10px;padding-top:10px}
+  .qitem{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+  .thumb{width:48px;height:48px;border-radius:8px;background:#0b1220;border:1px solid #1f2937;object-fit:cover}
+  .small{font-size:12px;color:var(--muted)}
+  .right{justify-content:flex-end}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="pill"><b>Common Uploader</b><span class="tag">folder: <b>common</b></span></div>
+    <div class="pill">API: <span id="apiStatus" class="tag">checking…</span></div>
+    <div class="pill">Parallel:
+      <input id="parallel" type="number" min="1" max="24" value="8" title="Parallel uploads" />
+    </div>
+    <div class="pill">JPEG q:
+      <input id="jpgq" type="number" min="50" max="100" value="90" title="JPEG quality (50–100)" />
+    </div>
+    <div class="pill">Resize long-edge:
+      <input id="maxwh" type="number" min="512" max="8000" value="4096" title="Max width/height" />px
+    </div>
+    <div class="pill">
+      Token:
+      <input id="token" type="text" placeholder="Bearer token" />
+      <button id="saveTok" class="btn" style="background:#34d399">Save</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3 class="h">Add files</h3>
+      <div id="drop" class="drop">
+        <div style="font-size:20px;margin-bottom:6px">Drag & Drop</div>
+        <div class="muted">या</div>
+        <div style="margin-top:8px">
+          <input id="picker" type="file" multiple accept="image/*" />
+        </div>
+        <div class="small" style="margin-top:10px">Any image format; client-side JPEG convert; duplicate auto-skip (server)</div>
+      </div>
+
+      <div class="row" style="margin-top:14px">
+        <button id="start" class="btn">Start Upload</button>
+        <button id="clear" class="btn" style="background:#475569">Clear List</button>
+      </div>
+
+      <div style="margin-top:14px" class="bar"><i id="prog"></i></div>
+      <div class="stat" style="margin-top:10px">
+        <span>Total: <span id="t_total" class="b">0</span></span>
+        <span class="ok">OK: <span id="t_ok" class="b">0</span></span>
+        <span class="warn">Duplicate: <span id="t_dup" class="b">0</span></span>
+        <span class="bad">Failed: <span id="t_fail" class="b">0</span></span>
+        <span>In-flight: <span id="t_run" class="b">0</span></span>
+        <span>Queued: <span id="t_q" class="b">0</span></span>
+      </div>
+
+      <div id="queue" class="queue"></div>
+    </div>
+
+    <div class="card">
+      <h3 class="h">Notes</h3>
+      <ul class="muted" style="margin-top:6px;line-height:1.7">
+        <li>यह पेज सिर्फ़ <b>common</b> फ़ोल्डर में अपलोड करता है।</li>
+        <li>किसी भी इमेज को browser में JPEG (quality & resize ऊपर सेटिंग) में convert कर के भेजता है – upload तेज़ होता है।</li>
+        <li>Backend duplicate (sha256) होने पर <code>duplicate:true</code> देता है – यहाँ Duplicate काउंटर बढ़ेगा और upload स्किप होगा।</li>
+        <li>एक साथ 2–3000 फ़ाइलें add करें – queue controlled-parallelism (डिफ़ॉल्ट 8) से stable और तेज़ चलता है।</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ======= CONFIG (अपना API base यहाँ रखें) =======
+  const API_BASE   = "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search";
+  const FOLDER_ID  = "common";
+
+  // ======= UI refs =======
+  const apiStatus = document.getElementById("apiStatus");
+  const drop = document.getElementById("drop");
+  const picker = document.getElementById("picker");
+  const startBtn = document.getElementById("start");
+  const clearBtn = document.getElementById("clear");
+  const prog = document.getElementById("prog");
+  const qWrap = document.getElementById("queue");
+
+  const inpParallel = document.getElementById("parallel");
+  const inpJpgQ     = document.getElementById("jpgq");
+  const inpMaxWH    = document.getElementById("maxwh");
+  const tokenBox    = document.getElementById("token");
+  const saveTokBtn  = document.getElementById("saveTok");
+
+  // counters
+  const t_total = document.getElementById("t_total");
+  const t_ok    = document.getElementById("t_ok");
+  const t_dup   = document.getElementById("t_dup");
+  const t_fail  = document.getElementById("t_fail");
+  const t_run   = document.getElementById("t_run");
+  const t_q     = document.getElementById("t_q");
+
+  // persist token/settings
+  tokenBox.value = localStorage.getItem("adminToken") || "";
+  inpParallel.value = localStorage.getItem("common_parallel") || inpParallel.value;
+  inpJpgQ.value     = localStorage.getItem("common_jpgq")     || inpJpgQ.value;
+  inpMaxWH.value    = localStorage.getItem("common_maxwh")    || inpMaxWH.value;
+
+  saveTokBtn.onclick = () => {
+    localStorage.setItem("adminToken", tokenBox.value.trim());
+    localStorage.setItem("common_parallel", inpParallel.value);
+    localStorage.setItem("common_jpgq", inpJpgQ.value);
+    localStorage.setItem("common_maxwh", inpMaxWH.value);
+    saveTokBtn.textContent = "Saved ✓";
+    setTimeout(() => (saveTokBtn.textContent = "Save"), 1200);
+  };
+
+  // ======= Health ping =======
+  (async () => {
+    try{
+      const r = await fetch(API_BASE + "/health");
+      apiStatus.textContent = r.ok ? "OK" : ("HTTP " + r.status);
+      apiStatus.style.color = r.ok ? "#22c55e" : "#f59e0b";
+    }catch(e){
+      apiStatus.textContent = "offline";
+      apiStatus.style.color = "#ef4444";
+    }
+  })();
+
+  // ======= Queue state =======
+  /** @type {Array<{file:File, id:string, status:string, el:HTMLElement}>} */
+  let QUEUE = [];
+  let running = 0, ok=0, dup=0, fail=0, total=0;
+  const genId = () => Math.random().toString(36).slice(2);
+
+  function resetStats(){
+    ok=dup=fail=running=0;
+    total = QUEUE.length;
+    updateStats();
+    setProg();
+  }
+  function updateStats(){
+    t_total.textContent = total;
+    t_ok.textContent    = ok;
+    t_dup.textContent   = dup;
+    t_fail.textContent  = fail;
+    t_run.textContent   = running;
+    t_q.textContent     = Math.max(0, QUEUE.filter(x => x.status==="queued").length);
+  }
+  function setProg(){
+    const done = ok + dup + fail;
+    const pct = total ? Math.min(100, Math.round((done/total)*100)) : 0;
+    prog.style.width = pct + "%";
+  }
+
+  function makeItem(f){
+    const id = genId();
+    const el = document.createElement("div");
+    el.className = "qitem";
+    el.innerHTML = `<img class="thumb" />
+      <div style="flex:1">
+        <div>${escapeHtml(f.name)}</div>
+        <div class="small" id="s_${id}">queued</div>
+      </div>`;
+    qWrap.appendChild(el);
+    const item = {file:f,id,el,status:"queued"};
+    QUEUE.push(item);
+
+    const img = el.querySelector("img");
+    img.src = URL.createObjectURL(f);
+    return item;
+  }
+
+  function escapeHtml(s){return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+  // Drag & drop
+  drop.addEventListener("dragover", e => {e.preventDefault(); drop.classList.add("drag")});
+  drop.addEventListener("dragleave", () => drop.classList.remove("drag"));
+  drop.addEventListener("drop", e => {
+    e.preventDefault(); drop.classList.remove("drag");
+    if(!e.dataTransfer?.files?.length) return;
+    addFiles(e.dataTransfer.files);
+  });
+  picker.addEventListener("change", e => addFiles(picker.files));
+
+  function addFiles(list){
+    const arr = Array.from(list).filter(f => f.type.startsWith("image/"));
+    arr.forEach(makeItem);
+    total = QUEUE.length;
+    updateStats();
+  }
+
+  clearBtn.onclick = () => {
+    QUEUE = [];
+    qWrap.innerHTML = "";
+    resetStats();
+  };
+
+  startBtn.onclick = () => start();
+
+  async function start(){
+    if(!tokenBox.value.trim()){
+      alert("Please enter admin Bearer token (same as Lambda ADMIN_TOKENS).");
+      return;
+    }
+    resetStats();
+    const parallel = clamp(parseInt(inpParallel.value || "8",10), 1, 24);
+    for(let i=0;i<parallel;i++) runNext();
+  }
+
+  function clamp(n,min,max){return Math.max(min, Math.min(max,n));}
+
+  async function runNext(){
+    const item = QUEUE.find(x => x.status==="queued");
+    if(!item) return; // nothing left
+
+    running++; updateStatus(item.id,"processing"); updateStats();
+
+    try{
+      const jpegQ = clamp(parseInt(inpJpgQ.value||"90",10),50,100)/100;
+      const maxWH = clamp(parseInt(inpMaxWH.value||"4096",10),512,8000);
+
+      // Convert on-demand to reduce memory
+      const dataUrl = await toJPEGDataURL(item.file, jpegQ, maxWH);
+
+      const res = await uploadOne(dataUrl);
+      if(res.duplicate){
+        dup++; updateStatus(item.id,"duplicate");
+      }else if(res.ok){
+        ok++; updateStatus(item.id,"ok");
+      }else{
+        fail++; updateStatus(item.id,"failed");
+      }
+    }catch(err){
+      console.error(err);
+      fail++; updateStatus(item.id,"failed: "+(err?.message||err));
+    }finally{
+      running--; setProg(); updateStats();
+      // continue pipeline
+      if(QUEUE.some(x => x.status==="queued")) runNext();
+    }
+  }
+
+  function updateStatus(id, s){
+    const el = document.getElementById("s_"+id);
+    if(el) el.textContent = s;
+    const item = QUEUE.find(x=>x.id===id);
+    if(item) item.status = s;
+  }
+
+  async function uploadOne(imageBase64){
+    const token = tokenBox.value.trim();
+    const r = await fetch(API_BASE + "/admin/upload", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify({
+        folderId: FOLDER_ID,
+        imageBase64
+      })
+    });
+    const j = await r.json().catch(()=>({}));
+    if(!r.ok) return { ok:false, error:j?.error || r.statusText };
+    return j; // {ok:true,...} || {duplicate:true,...}
+  }
+
+  // Convert to JPEG (with resize) – streaming/bitmap based for speed
+  async function toJPEGDataURL(file, quality=0.9, maxWH=4096){
+    // createImageBitmap is much faster than <img>
+    let bmp;
+    try{
+      bmp = await createImageBitmap(file);
+    }catch(e){
+      // fallback: use img element
+      const url = URL.createObjectURL(file);
+      const img = await new Promise((resolve,reject)=>{
+        const i = new Image(); i.onload=()=>resolve(i); i.onerror=reject; i.src=url;
+      });
+      URL.revokeObjectURL(url);
+      bmp = img;
+    }
+    const {width, height} = bmp;
+    const scale = Math.min(1, maxWH / Math.max(width,height));
+    const W = Math.max(1, Math.round(width*scale));
+    const H = Math.max(1, Math.round(height*scale));
+
+    const useOff = typeof OffscreenCanvas!=="undefined";
+    const canvas = useOff ? new OffscreenCanvas(W,H) : Object.assign(document.createElement("canvas"), {width:W, height:H});
+    if(!useOff){ canvas.width = W; canvas.height = H; }
+    const ctx = canvas.getContext("2d", {alpha:false, colorSpace:"srgb"});
+    ctx.drawImage(bmp, 0, 0, W, H);
+
+    const blob = await (useOff
+      ? canvas.convertToBlob({ type: "image/jpeg", quality })
+      : new Promise(res => canvas.toBlob(res, "image/jpeg", quality))
+    );
+    const buf = await blob.arrayBuffer();
+    // data URL (backend expects base64 string or dataURL)
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+    return "data:image/jpeg;base64," + b64;
+  }
+
+})();
+</script>
+</body>
+</html>
