@@ -324,6 +324,57 @@
     };
     document.getElementById('btnClearSel').onclick = document.getElementById('btnUnselectAll').onclick;
 
+
+    // --- URL-based de-dup (ignore query params) ---
+    function dedupeByUrl(items){
+      const keep = new Map();
+      for (const it of (items||[])){
+        const raw = it && it.downloadUrl || "";
+        let key = raw;
+        try { key = new URL(raw).pathname; } catch (e) { key = raw.split("?")[0]; }
+        if (!keep.has(key)) keep.set(key, it);
+      }
+      return Array.from(keep.values());
+    }
+
+    // --- Perceptual de-dup helpers (aHash) ---
+    function hamming(a,b){ if(!a||!b||a.length!==b.length) return 64; let d=0; for(let i=0;i<a.length;i++) if(a[i]!==b[i]) d++; return d; }
+    function aHashFromUrl(url){
+      return new Promise((resolve)=>{
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          try{
+            const c = document.createElement("canvas");
+            const g = c.getContext("2d");
+            c.width = 8; c.height = 8;
+            g.drawImage(img, 0, 0, 8, 8);
+            const data = g.getImageData(0,0,8,8).data;
+            const gray = [];
+            for (let i=0;i<data.length;i+=4){
+              const r=data[i], gg=data[i+1], b=data[i+2];
+              gray.push(Math.round(0.299*r + 0.587*gg + 0.114*b));
+            }
+            const avg = gray.reduce((a,b)=>a+b,0)/gray.length;
+            let bits = ""; for (const v of gray) bits += v>avg ? "1" : "0";
+            resolve(bits);
+          }catch(e){ resolve(""); }
+        };
+        img.onerror = ()=> resolve("");
+        img.src = url;
+      });
+    }
+    async function dedupeByImageContent(items, getUrl = it => it.downloadUrl, threshold = 5){
+      const kept = [], hashes = [];
+      for (const it of (items||[])){
+        const url = (getUrl(it) || "").split("#")[0];
+        const hash = await aHashFromUrl(url);
+        let dup = false;
+        for (const h of hashes){ if (hamming(hash, h) <= threshold){ dup = true; break; } }
+        if (!dup){ kept.push(it); hashes.push(hash); }
+      }
+      return kept;
+    }
     // चुने हुए को वाकई डाउनलोड कराएँ (नई टैब नहीं) – blob fetch
     function fileNameFromUrl(u){
       try{ return decodeURIComponent(new URL(u).pathname.split('/').pop()||'photo.jpg'); }catch{return 'photo.jpg'}
@@ -362,7 +413,7 @@
         if (!r.ok){ msg.innerHTML = `<div class="error">Server Error (${r.status}).</div>`; console.warn(j); return; }
         if (!j || !Array.isArray(j.results)){ msg.innerHTML = `<div class="error">Unexpected response.</div>`; console.warn(j); return; }
 
-        allResults = j.results || [];
+        allResults = await dedupeByImageContent(dedupeByUrl(j.results || []), it => it.downloadUrl, 5);
         if (j.count && j.count > allResults.length){
           msg.innerHTML = `<div class="okmsg">Found: ${j.count}. Showing: ${allResults.length}. Need more? add <b>?max=500</b> in URL.</div>`;
         } else {
