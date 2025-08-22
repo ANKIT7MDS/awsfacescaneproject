@@ -63,7 +63,7 @@
       LINK_ID: "",              // linkId हटाया गया — सिर्फ folder मोड
       DEFAULT_FOLDER: "common",  // यहीं सर्च होगी
       THRESHOLD: 90,             // 93-जैसे स्कोर को पास करने हेतु
-      MAX_RESULTS: 24            // fast-first
+      MAX_RESULTS: 200            // fast-first
     };
   </script>
 </head>
@@ -162,7 +162,7 @@
     const LINK_ID = ""; // forced empty — folder-only search
     const DEFAULT_FOLDER = qs.get("folder") || (window.API && window.API.DEFAULT_FOLDER) || "common";
     const THRESHOLD = Number(qs.get("threshold")) || (window.API && window.API.THRESHOLD) || 90;
-    const MAX_RESULTS = Number(qs.get("max")) || (window.API && window.API.MAX_RESULTS) || 24;
+    const MAX_RESULTS = Number(qs.get("max")) || (window.API && window.API.MAX_RESULTS) || 200;
 
     /************** DOM **************/
     const video=document.getElementById('video'); const preview=document.getElementById('preview'); const selected=document.getElementById('selected');
