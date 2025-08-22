@@ -3,11 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Selfie Search — Fast</title>
+  <title>Selfie Search — Fast (Folder‑only, Optimized)</title>
   <style>
-    :root{
-      --bg:#fff8f1;--panel:#ffffff;--text:#1e1b16;--muted:#6b7280;--line:#f1e6d8;--brand:#ff7a00;--brand2:#ff9e3d;--chip:#fff1e0;--shadow:0 8px 24px rgba(255,122,0,.18)
-    }
+    :root{ --bg:#fff8f1;--panel:#ffffff;--text:#1e1b16;--muted:#6b7280;--line:#f1e6d8;--brand:#ff7a00;--brand2:#ff9e3d;--chip:#fff1e0;--shadow:0 8px 24px rgba(255,122,0,.18) }
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
     .wrap{max-width:1120px;margin-inline:auto;padding:18px}
@@ -17,7 +15,6 @@
     .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 2px 14px rgba(0,0,0,.04)}
     .row{display:grid;grid-template-columns:1fr;gap:16px}
     @media(min-width:920px){.row{grid-template-columns:1fr 1fr}}
-
     .h1{font-size:18px;margin:0 0 8px}
     .pill{display:inline-flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:#8b5a2b}
     input[type=text],select{width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;color:#1f2937;padding:12px 14px}
@@ -32,8 +29,7 @@
 
     .media{aspect-ratio:4/3;background:#fff;border:1px dashed var(--line);border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden}
     .media video,.media img{width:100%;height:100%;object-fit:cover}
-
-    .note{font-size:12px;color:var(--muted)}
+    .note{font-size:12px;color:#6b7280}
 
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:10px}
     .tile{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px;position:relative;transition:box-shadow .12s, transform .12s}
@@ -60,14 +56,14 @@
     .lb-next{right:14px}
   </style>
 
-  <!-- CONFIG (fast defaults) -->
+  <!-- CONFIG (folder-only; linkId disabled) -->
   <script>
     window.API = {
       BASE: "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search",
-      LINK_ID: "3ff7e052ee37",
-      DEFAULT_FOLDER: "common",
-      THRESHOLD: 98,
-      MAX_RESULTS: 100   // fast-first: pull fewer first
+      LINK_ID: "",              // linkId हटाया गया — सिर्फ folder मोड
+      DEFAULT_FOLDER: "common",  // यहीं सर्च होगी
+      THRESHOLD: 90,             // 93-जैसे स्कोर को पास करने हेतु
+      MAX_RESULTS: 24            // fast-first
     };
   </script>
 </head>
@@ -75,7 +71,7 @@
   <div class="wrap">
     <header>
       <div class="title">भारतीय जनता पार्टी मंदसौर</div>
-      <div class="subtitle">कार्यक्रम की आपकी तस्वीरें — तेज़ सर्च</div>
+      <div class="subtitle">फोल्डर मोड में तेज़ सर्च (linkId बन्द)</div>
     </header>
 
     <div class="row">
@@ -101,14 +97,14 @@
       <section class="card">
         <div class="stack" style="justify-content:space-between">
           <div class="h1">Selected Photo <span class="pill muted">fast mode</span></div>
-          <span class="pill" id="folderInfo">folder: link</span>
+          <span class="pill" id="folderInfo">folder: common</span>
         </div>
         <div class="media"><img id="selected" alt="selected" /></div>
         <div class="stack" style="margin:12px 0 6px">
           <button class="btn primary" id="btnSearch" disabled>Search</button>
           <button class="btn ghost" id="btnClear">Clear</button>
-          <label class="pill" style="gap:6px"><input type="checkbox" id="chkHD"/> HQ upload</label>
-          <label class="pill" style="gap:6px"><input type="checkbox" id="chkDedupe" checked/> Smart de‑dup (background)</label>
+          <label class="pill" style="gap:6px"><input type="checkbox" id="chkHD" checked/> HQ upload</label>
+          <label class="pill" style="gap:6px"><input type="checkbox" id="chkDedupe"/> Smart de‑dup</label>
         </div>
         <div class="note">API: <input id="apiField" type="text" readonly /></div>
         <div class="note" id="timing"></div>
@@ -163,100 +159,62 @@
     /************** Config **************/
     const qs = new URLSearchParams(location.search);
     const BASE = (qs.get("base") || (window.API && window.API.BASE) || "").replace(/\/$/, "");
-    const LINK_ID = qs.get("link") || (window.API && window.API.LINK_ID) || "";
+    const LINK_ID = ""; // forced empty — folder-only search
     const DEFAULT_FOLDER = qs.get("folder") || (window.API && window.API.DEFAULT_FOLDER) || "common";
-    const THRESHOLD = Number(qs.get("threshold")) || (window.API && window.API.THRESHOLD) || 98;
-    const MAX_RESULTS = Number(qs.get("max")) || (window.API && window.API.MAX_RESULTS) || 100;
+    const THRESHOLD = Number(qs.get("threshold")) || (window.API && window.API.THRESHOLD) || 90;
+    const MAX_RESULTS = Number(qs.get("max")) || (window.API && window.API.MAX_RESULTS) || 24;
 
     /************** DOM **************/
     const video=document.getElementById('video'); const preview=document.getElementById('preview'); const selected=document.getElementById('selected');
     const file=document.getElementById('file'); const btnStart=document.getElementById('btnStart'); const btnSnap=document.getElementById('btnSnap');
     const btnStop=document.getElementById('btnStop'); const btnSearch=document.getElementById('btnSearch'); const btnClear=document.getElementById('btnClear');
-    const apiField=document.getElementById('apiField'); const folderInfo=document.getElementById('folderInfo'); const msg=document.getElementById('msg');
+    const apiField=document.getElementById('apiField'); const msg=document.getElementById('msg');
     const resultsEl=document.getElementById('results'); const pageSizeSel=document.getElementById('pageSize'); const pageBadge=document.getElementById('pageBadge');
     const countBadge=document.getElementById('countBadge'); const btnPrev=document.getElementById('btnPrev'); const btnNext=document.getElementById('btnNext');
     const btnSelectAll=document.getElementById('btnSelectAll'); const btnUnselectAll=document.getElementById('btnUnselectAll'); const btnDownloadSel=document.getElementById('btnDownloadSel');
     const btnClearSel=document.getElementById('btnClearSel'); const btnRefine=document.getElementById('btnRefine');
-    const lightbox=document.getElementById('lightbox'); const lightImg=document.getElementById('lightImg'); const lbClose=document.getElementById('lbClose');
-    const lbPrev=document.getElementById('lbPrev'); const lbNext=document.getElementById('lbNext'); const timing=document.getElementById('timing');
+    const lightbox=document.getElementById('lightbox'); const lightImg=document.getElementById('lightImg'); const timing=document.getElementById('timing');
     const chkHD=document.getElementById('chkHD'); const chkDedupe=document.getElementById('chkDedupe');
 
     apiField.value = BASE || "(missing)";
-    folderInfo.textContent = LINK_ID ? "folder: link" : `folder: ${DEFAULT_FOLDER}`;
 
     /************** Camera **************/
     let stream=null, currentDataUrl="";
     function setSelected(dataUrl){ currentDataUrl=dataUrl||""; selected.src=dataUrl||""; btnSearch.disabled=!dataUrl||!BASE; }
     function toDataURLFromFile(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f);}); }
 
-    async function startCam(){
-      if(stream) return; try{ stream=await navigator.mediaDevices.getUserMedia({ video:{facingMode:"user"}, audio:false });
-        video.srcObject=stream; video.onloadedmetadata=()=>video.play(); video.style.display=""; preview.style.display="none"; btnSnap.disabled=false; btnStop.disabled=false;
-      }catch{ alert("Camera not available. Please allow permission."); }
-    }
+    async function startCam(){ if(stream) return; try{ stream=await navigator.mediaDevices.getUserMedia({ video:{facingMode:"user"}, audio:false }); video.srcObject=stream; video.onloadedmetadata=()=>video.play(); video.style.display=""; preview.style.display="none"; btnSnap.disabled=false; btnStop.disabled=false; }catch{ alert("Camera not available. Please allow permission."); } }
     function stopCam(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } btnSnap.disabled=true; btnStop.disabled=true; video.style.display="none"; }
 
-    // Resize helper (speeds up upload)
-    async function resizeDataUrl(dataUrl, maxSide=720, quality=0.7){
-      if (chkHD.checked) return dataUrl; // send HQ if asked
-      return new Promise((resolve)=>{
-        const img=new Image(); img.onload=()=>{
-          const {width, height} = img; const scale = Math.min(1, maxSide/Math.max(width,height));
-          const sw = Math.round(width*scale), sh = Math.round(height*scale);
-          const c=document.createElement('canvas'); c.width=sw; c.height=sh; const g=c.getContext('2d');
-          g.drawImage(img,0,0,sw,sh); resolve(c.toDataURL('image/jpeg', quality)); };
-        img.onerror=()=>resolve(dataUrl); img.src=dataUrl; });
-    }
+    // Resize helper (fast upload). HQ टिक होने पर मूल ही भेजें
+    async function resizeDataUrl(dataUrl, maxSide=720, quality=0.7){ if (chkHD.checked) return dataUrl; return new Promise((resolve)=>{ const img=new Image(); img.onload=()=>{ const {width, height}=img; const scale=Math.min(1, maxSide/Math.max(width,height)); const sw=Math.round(width*scale), sh=Math.round(height*scale); const c=document.createElement('canvas'); c.width=sw; c.height=sh; const g=c.getContext('2d'); g.drawImage(img,0,0,sw,sh); resolve(c.toDataURL('image/jpeg', quality)); }; img.onerror=()=>resolve(dataUrl); img.src=dataUrl; }); }
 
-    function snap(){ if(!video.videoWidth) return; const c=document.createElement('canvas'); c.width=video.videoWidth; c.height=video.videoHeight;
-      c.getContext('2d').drawImage(video,0,0,c.width,c.height); const dataUrl=c.toDataURL('image/jpeg',.85); preview.src=dataUrl; preview.style.display=""; video.style.display="none"; setSelected(dataUrl); }
+    function snap(){ if(!video.videoWidth) return; const c=document.createElement('canvas'); c.width=video.videoWidth; c.height=video.videoHeight; c.getContext('2d').drawImage(video,0,0,c.width,c.height); const dataUrl=c.toDataURL('image/jpeg',.85); preview.src=dataUrl; preview.style.display=""; video.style.display="none"; setSelected(dataUrl); }
 
     btnStart.onclick=startCam; btnStop.onclick=stopCam; btnSnap.onclick=snap; btnClear.onclick=()=> setSelected("");
-
     if(file){ file.onchange = async (ev)=>{ const f=ev.target.files?.[0]; if(!f) return; setSelected(await toDataURLFromFile(f)); }; }
 
     /************** Results + Pager **************/
     let allResults=[], currentPage=1;
     function pageSize(){ return Number(pageSizeSel.value)||24; }
-    function updatePager(){ const total=allResults.length; const ps=pageSize(); const totalPages=Math.max(1, Math.ceil(total/ps));
-      if(currentPage>totalPages) currentPage=totalPages; pageBadge.textContent=`${currentPage} / ${totalPages}`; countBadge.textContent=`${total} results`;
-      btnPrev.disabled=(currentPage<=1); btnNext.disabled=(currentPage>=totalPages);
-      const anySel = document.querySelectorAll('.tile input[type=checkbox]:checked').length>0; btnDownloadSel.disabled=!anySel; btnClearSel.disabled=!anySel; btnRefine.disabled=!total;
-    }
-    function renderPage(){ const ps=pageSize(); const start=(currentPage-1)*ps; const slice=allResults.slice(start, start+ps);
-      resultsEl.innerHTML = slice.map((x,i)=>`<div class="tile" data-idx="${start+i}"><input type="checkbox" aria-label="select image" /><img src="${x.downloadUrl||''}" alt="match" data-zoom="${x.downloadUrl||''}"/></div>`).join("");
-      resultsEl.style.display = slice.length ? "" : "none";
-      resultsEl.querySelectorAll('.tile input[type=checkbox]').forEach(cb=>{ cb.addEventListener('change',()=>{ cb.closest('.tile').classList.toggle('selected', cb.checked); updatePager(); });});
-      resultsEl.querySelectorAll('.tile img').forEach(img=>{ img.addEventListener('click',()=> openLightbox(Number(img.closest('.tile').dataset.idx))); });
-      updatePager(); }
-
-    document.getElementById('btnPrev').onclick=()=>{ currentPage--; renderPage(); };
-    document.getElementById('btnNext').onclick=()=>{ currentPage++; renderPage(); };
-    pageSizeSel.onchange=()=>{ currentPage=1; renderPage(); };
-    document.getElementById('btnSelectAll').onclick=()=>{ resultsEl.querySelectorAll('.tile input[type=checkbox]').forEach(cb=>{ cb.checked=true; cb.dispatchEvent(new Event('change'));}); };
-    document.getElementById('btnUnselectAll').onclick=()=>{ resultsEl.querySelectorAll('.tile input[type=checkbox]').forEach(cb=>{ cb.checked=false; cb.dispatchEvent(new Event('change'));}); };
-    document.getElementById('btnClearSel').onclick=document.getElementById('btnUnselectAll').onclick;
+    function updatePager(){ const total=allResults.length; const ps=pageSize(); const totalPages=Math.max(1, Math.ceil(total/ps)); if(currentPage>totalPages) currentPage=totalPages; pageBadge.textContent=`${currentPage} / ${totalPages}`; countBadge.textContent=`${total} results`; btnPrev.disabled=(currentPage<=1); btnNext.disabled=(currentPage>=totalPages); const anySel=document.querySelectorAll('.tile input[type=checkbox]:checked').length>0; btnDownloadSel.disabled=!anySel; btnClearSel.disabled=!anySel; btnRefine.disabled=!total; }
+    function renderPage(){ const ps=pageSize(); const start=(currentPage-1)*ps; const slice=allResults.slice(start, start+ps); resultsEl.innerHTML = slice.map((x,i)=>`<div class="tile" data-idx="${start+i}"><input type="checkbox" aria-label="select image" /><img src="${x.downloadUrl||''}" alt="match" data-zoom="${x.downloadUrl||''}"/></div>`).join(""); resultsEl.style.display = slice.length ? "" : "none"; resultsEl.querySelectorAll('.tile input[type=checkbox]').forEach(cb=>{ cb.addEventListener('change',()=>{ cb.closest('.tile').classList.toggle('selected', cb.checked); updatePager(); });}); resultsEl.querySelectorAll('.tile img').forEach(img=>{ img.addEventListener('click',()=> openLightbox(Number(img.closest('.tile').dataset.idx))); }); updatePager(); }
+    document.getElementById('btnPrev').onclick=()=>{ currentPage--; renderPage(); }; document.getElementById('btnNext').onclick=()=>{ currentPage++; renderPage(); }; pageSizeSel.onchange=()=>{ currentPage=1; renderPage(); };
+    document.getElementById('btnSelectAll').onclick=()=>{ resultsEl.querySelectorAll('.tile input[type=checkbox]').forEach(cb=>{ cb.checked=true; cb.dispatchEvent(new Event('change'));}); }; document.getElementById('btnUnselectAll').onclick=()=>{ resultsEl.querySelectorAll('.tile input[type=checkbox]').forEach(cb=>{ cb.checked=false; cb.dispatchEvent(new Event('change'));}); }; document.getElementById('btnClearSel').onclick=document.getElementById('btnUnselectAll').onclick;
 
     /************** De-dup helpers **************/
     function dedupeByUrl(items){ const keep=new Map(); for(const it of (items||[])){ const raw=it && it.downloadUrl || ""; let key=raw; try{ key=new URL(raw).pathname; }catch(e){ key=raw.split("?")[0]; } if(!keep.has(key)) keep.set(key,it);} return Array.from(keep.values()); }
     function hamming(a,b){ if(!a||!b||a.length!==b.length) return 64; let d=0; for(let i=0;i<a.length;i++) if(a[i]!==b[i]) d++; return d; }
     function aHashFromUrl(url){ return new Promise((resolve)=>{ const img=new Image(); img.crossOrigin="anonymous"; img.onload=()=>{ try{ const c=document.createElement("canvas"), g=c.getContext("2d"); c.width=8; c.height=8; g.drawImage(img,0,0,8,8); const data=g.getImageData(0,0,8,8).data; const gray=[]; for(let i=0;i<data.length;i+=4){ const r=data[i], gg=data[i+1], b=data[i+2]; gray.push(Math.round(0.299*r + 0.587*gg + 0.114*b)); } const avg=gray.reduce((a,b)=>a+b,0)/gray.length; let bits=""; for(const v of gray) bits += v>avg ? "1" : "0"; resolve(bits);}catch(e){ resolve(""); } }; img.onerror=()=>resolve(""); img.src=url; }); }
-    async function dedupeByImageContent(items, getUrl=it=>it.downloadUrl, threshold=5){ const kept=[], hashes=[]; for(const it of (items||[])){ const url=(getUrl(it)||"").split("#")[0]; const hash=await aHashFromUrl(url); let dup=false; for(const h of hashes){ if(hamming(hash,h) <= threshold){ dup=true; break; } } if(!dup){ kept.push(it); hashes.push(hash); } } return kept; }
+    async function dedupeByImageContent(items, getUrl=it=>it.downloadUrl, threshold=6){ const kept=[], hashes=[]; for(const it of (items||[])){ const url=(getUrl(it)||"").split("#")[0]; const hash=await aHashFromUrl(url); let dup=false; for(const h of hashes){ if(hamming(hash,h) <= threshold){ dup=true; break; } } if(!dup){ kept.push(it); hashes.push(hash); } } return kept; }
 
     /************** Fetch with Abort + Timeout **************/
-    let inFlightCtrl=null;
-    function abortInFlight(){ if(inFlightCtrl){ inFlightCtrl.abort(); inFlightCtrl=null; } }
-
-    async function postJSONWithTimeout(url, body, ms=20000){
-      abortInFlight(); const ctrl = new AbortController(); inFlightCtrl = ctrl; const id = setTimeout(()=> ctrl.abort("timeout"), ms);
-      try{ const r = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body), signal: ctrl.signal }); clearTimeout(id); return r; }
-      finally{ inFlightCtrl=null; }
-    }
+    let inFlightCtrl=null; function abortInFlight(){ if(inFlightCtrl){ inFlightCtrl.abort(); inFlightCtrl=null; } }
+    async function postJSONWithTimeout(url, body, ms=20000){ abortInFlight(); const ctrl=new AbortController(); inFlightCtrl=ctrl; const id=setTimeout(()=> ctrl.abort("timeout"), ms); try{ const r=await fetch(url,{ method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body), signal: ctrl.signal }); clearTimeout(id); return r; } finally{ inFlightCtrl=null; } }
 
     /************** Download selected **************/
     function fileNameFromUrl(u){ try{ return decodeURIComponent(new URL(u).pathname.split('/').pop()||'photo.jpg'); }catch{return 'photo.jpg'} }
     async function forceDownload(url){ const resp=await fetch(url,{mode:'cors'}); const blob=await resp.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fileNameFromUrl(url); document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 50); }
-
     btnDownloadSel.onclick = async ()=>{ const selectedUrls=[...resultsEl.querySelectorAll('.tile input:checked')].map(cb=>{ const idx=Number(cb.closest('.tile').dataset.idx); return allResults[idx]?.downloadUrl; }).filter(Boolean); for(const url of selectedUrls){ try{ await forceDownload(url);}catch(e){ console.warn("download failed", url, e);} } };
 
     /************** Lightbox **************/
@@ -264,18 +222,18 @@
     function closeLightbox(){ lightbox.classList.remove('show'); document.body.classList.remove('zooming'); lightbox.setAttribute('aria-hidden','true'); lightImg.src=""; }
     function updateLightbox(){ const item=allResults[lbIndex]; if(!item){ closeLightbox(); return; } lightImg.src=item.downloadUrl||""; }
     function step(delta){ const total=allResults.length; if(!total) return; lbIndex=(lbIndex+delta+total)%total; updateLightbox(); }
-    document.getElementById('lbClose').onclick=closeLightbox; lbPrev.onclick=()=> step(-1); lbNext.onclick=()=> step(+1);
+    document.getElementById('lbClose').onclick=closeLightbox; document.getElementById('lbPrev').onclick=()=> step(-1); document.getElementById('lbNext').onclick=()=> step(+1);
     lightbox.addEventListener('click',(e)=>{ if(e.target===lightbox) closeLightbox(); }); window.addEventListener('keydown',(e)=>{ if(!lightbox.classList.contains('show')) return; if(e.key==='Escape') closeLightbox(); if(e.key==='ArrowLeft') step(-1); if(e.key==='ArrowRight') step(+1); });
 
-    /************** Search flow (Fast-first) **************/
+    /************** Search flow (Fast-first, folder-only) **************/
     document.getElementById('btnSearch').onclick = async ()=>{
       if(!currentDataUrl) return alert('Pick/Capture a photo first.'); if(!BASE) return alert('API BASE is missing.');
       msg.textContent = 'Preparing image…'; resultsEl.style.display='none'; resultsEl.innerHTML=''; timing.textContent='';
 
       const t0 = performance.now();
-      const smallDataUrl = await resizeDataUrl(currentDataUrl, 720, 0.7); // fast upload
-      const body = { imageBase64: smallDataUrl, threshold: THRESHOLD, maxResults: MAX_RESULTS };
-      if (LINK_ID) body.linkId = LINK_ID; else body.allowedFolders = [DEFAULT_FOLDER];
+      const smallDataUrl = await resizeDataUrl(currentDataUrl, 720, 0.7); // HQ on => original
+      const body = { imageBase64: smallDataUrl, threshold: THRESHOLD, maxResults: MAX_RESULTS, allowedFolders: [DEFAULT_FOLDER] };
+      // LINK_ID जानबूझ कर नहीं भेज रहे
 
       const t1 = performance.now();
       msg.textContent = 'Searching…';
@@ -290,13 +248,12 @@
 
       // Fast render (URL de-dup only)
       allResults = dedupeByUrl(json.results || []);
-      msg.innerHTML = `<div class="okmsg">${allResults.length} matches (fast). ${chkDedupe.checked ? 'Refining in background…' : ''}</div>`;
+      msg.innerHTML = `<div class=\"okmsg\">${allResults.length} matches (folder: ${DEFAULT_FOLDER}). ${chkDedupe.checked ? 'Refining in background…' : ''}</div>`;
       currentPage=1; renderPage();
 
       const t3 = performance.now();
-      // Background perceptual de-dup (optional)
+      // Optional background perceptual de-dup
       if (chkDedupe.checked){
-        // Yield to UI, then refine to avoid blocking
         (window.requestIdleCallback||setTimeout)(async ()=>{
           const refined = await dedupeByImageContent(allResults, it=>it.downloadUrl, 6);
           if (refined.length < allResults.length){ allResults = refined; renderPage(); msg.innerHTML = `<div class=\"okmsg\">${allResults.length} unique matches (refined).</div>`; }
@@ -308,7 +265,7 @@
     };
 
     // Manual refine button
-    btnRefine.onclick = async ()=>{ if(!allResults.length) return; msg.textContent='Refining duplicates…'; const refined=await dedupeByImageContent(allResults, it=>it.downloadUrl, 6); allResults=refined; renderPage(); msg.innerHTML = `<div class="okmsg">${allResults.length} unique matches (refined).</div>`; };
+    document.getElementById('btnRefine').onclick = async ()=>{ if(!allResults.length) return; msg.textContent='Refining duplicates…'; const refined=await dedupeByImageContent(allResults, it=>it.downloadUrl, 6); allResults=refined; renderPage(); msg.innerHTML = `<div class=\"okmsg\">${allResults.length} unique matches (refined).</div>`; };
 
     // init
     document.getElementById('apiField').value = BASE || '(missing)';
