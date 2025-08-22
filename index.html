@@ -83,7 +83,7 @@
       LINK_ID: "3ff7e052ee37",
       DEFAULT_FOLDER: "common",
       THRESHOLD: 95,
-      MAX_RESULTS: 200
+      MAX_RESULTS: 96
     };
   </script>
 </head>
@@ -187,8 +187,8 @@
     const BASE = (qs.get("base") || (window.API && window.API.BASE) || "").replace(/\/$/, "");
     const LINK_ID = qs.get("link") || (window.API && window.API.LINK_ID) || "";
     const DEFAULT_FOLDER = qs.get("folder") || (window.API && window.API.DEFAULT_FOLDER) || "common";
-    const THRESHOLD = Number(qs.get("threshold")) || (window.API && window.API.THRESHOLD) || 50;
-    const MAX_RESULTS = Number(qs.get("max")) || (window.API && window.API.MAX_RESULTS) || 200;
+    const THRESHOLD = Number(qs.get("threshold")) || (window.API && window.API.THRESHOLD) || 95;
+    const MAX_RESULTS = Number(qs.get("max")) || (window.API && window.API.MAX_RESULTS) || 96;
 
     /* ---------- DOM ---------- */
     const video   = document.getElementById('video');
