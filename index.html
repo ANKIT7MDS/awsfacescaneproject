@@ -66,8 +66,8 @@
       BASE: "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search",
       LINK_ID: "3ff7e052ee37",
       DEFAULT_FOLDER: "common",
-      THRESHOLD: 95,
-      MAX_RESULTS: 24   // fast-first: pull fewer first
+      THRESHOLD: 98,
+      MAX_RESULTS: 100   // fast-first: pull fewer first
     };
   </script>
 </head>
@@ -165,8 +165,8 @@
     const BASE = (qs.get("base") || (window.API && window.API.BASE) || "").replace(/\/$/, "");
     const LINK_ID = qs.get("link") || (window.API && window.API.LINK_ID) || "";
     const DEFAULT_FOLDER = qs.get("folder") || (window.API && window.API.DEFAULT_FOLDER) || "common";
-    const THRESHOLD = Number(qs.get("threshold")) || (window.API && window.API.THRESHOLD) || 95;
-    const MAX_RESULTS = Number(qs.get("max")) || (window.API && window.API.MAX_RESULTS) || 24;
+    const THRESHOLD = Number(qs.get("threshold")) || (window.API && window.API.THRESHOLD) || 98;
+    const MAX_RESULTS = Number(qs.get("max")) || (window.API && window.API.MAX_RESULTS) || 100;
 
     /************** DOM **************/
     const video=document.getElementById('video'); const preview=document.getElementById('preview'); const selected=document.getElementById('selected');
