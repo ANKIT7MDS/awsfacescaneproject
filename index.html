@@ -62,7 +62,7 @@
       BASE: "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search",
       LINK_ID: "",              // linkId हटाया गया — सिर्फ folder मोड
       DEFAULT_FOLDER: "common",  // यहीं सर्च होगी
-      THRESHOLD: 90,             // 93-जैसे स्कोर को पास करने हेतु
+      THRESHOLD: 75,             // 93-जैसे स्कोर को पास करने हेतु
       MAX_RESULTS: 200            // fast-first
     };
   </script>
@@ -161,7 +161,7 @@
     const BASE = (qs.get("base") || (window.API && window.API.BASE) || "").replace(/\/$/, "");
     const LINK_ID = ""; // forced empty — folder-only search
     const DEFAULT_FOLDER = qs.get("folder") || (window.API && window.API.DEFAULT_FOLDER) || "common";
-    const THRESHOLD = Number(qs.get("threshold")) || (window.API && window.API.THRESHOLD) || 90;
+    const THRESHOLD = Number(qs.get("threshold")) || (window.API && window.API.THRESHOLD) || 75;
     const MAX_RESULTS = Number(qs.get("max")) || (window.API && window.API.MAX_RESULTS) || 200;
 
     /************** DOM **************/
