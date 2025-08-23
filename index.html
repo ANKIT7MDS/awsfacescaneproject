@@ -83,7 +83,7 @@
       LINK_ID: "3ff7e052ee37",
       DEFAULT_FOLDER: "common",
       THRESHOLD: 95,
-      MAX_RESULTS: 96
+      MAX_RESULTS: 500
     };
   </script>
 </head>
@@ -411,7 +411,7 @@
         const j = await r.json().catch(()=> ({}));
 
         if (!r.ok){ msg.innerHTML = `<div class="error">Server Error (${r.status}).</div>`; console.warn(j); return; }
-        if (!j || !Array.isArray(j.results)){ msg.innerHTML = `<div class="error">Unexpected response.</div>`; console.warn(j); return; }
+        if (!j || !Array.isArray(j.results)){ msg.innerHTML = `<div class="error">Unexpected response${j && j.error ? (": " + j.error) : ""}.</div>`; console.warn(j); return; }
 
         allResults = await dedupeByImageContent(dedupeByUrl(j.results || []), it => it.downloadUrl, 10);
         if (j.count && j.count > allResults.length){
