@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Selfie Search (Fixed / Fast)</title>
+  <title>Selfie Search</title>
   <style>
     :root{
       --bg:#fff8f1;
@@ -11,8 +11,8 @@
       --text:#1e1b16;
       --muted:#6b7280;
       --line:#f1e6d8;
-      --brand:#ff7a00;
-      --brand2:#ff9e3d;
+      --brand:#ff7a00;   /* primary orange */
+      --brand2:#ff9e3d;  /* light orange  */
       --chip:#fff1e0;
       --shadow:0 8px 24px rgba(255,122,0,.18);
     }
@@ -26,9 +26,11 @@
     .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 2px 14px rgba(0,0,0,.04)}
     .row{display:grid;grid-template-columns:1fr;gap:16px}
     @media(min-width:920px){.row{grid-template-columns:1fr 1fr}}
+
     .h1{font-size:18px;margin:0 0 8px}
     .pill{display:inline-flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:#8b5a2b}
     input[type=text],select{width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:12px 14px}
+
     .btn{appearance:none;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer;transition:transform .05s ease, box-shadow .2s}
     .btn:active{transform:translateY(1px)}
     .btn.primary{background:linear-gradient(180deg,var(--brand),var(--brand2));color:#3a1d00;box-shadow:var(--shadow)}
@@ -36,9 +38,13 @@
     .btn.bad{background:#ffe4e6;color:#9f1239;border:1px solid #fecdd3}
     .btn.ok{background:#dcfce7;color:#14532d;border:1px solid #bbf7d0}
     .stack{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
     .media{aspect-ratio:4/3;background:#fff;border:1px dashed var(--line);border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden}
     .media video,.media img{width:100%;height:100%;object-fit:cover}
+
     .note{font-size:12px;color:var(--muted)}
+
+    /* Bigger grid tiles, less side space */
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:10px}
     .tile{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px;position:relative;transition:box-shadow .12s, transform .12s}
     .tile:hover{box-shadow:0 12px 28px rgba(0,0,0,.08)}
@@ -46,11 +52,20 @@
     .tile:hover img{transform:scale(1.03)}
     .tile input[type=checkbox]{position:absolute;top:10px;left:10px;scale:1.2}
     .tile.selected{outline:3px solid var(--brand);outline-offset:2px}
-    .sticky-bar{position:sticky;bottom:0;z-index:5;background:#fffbeccc;backdrop-filter:blur(6px);padding:10px;border:1px solid var(--line);border-radius:12px;margin-top:12px}
+
+    .sticky-bar{
+      position:sticky;bottom:0;z-index:5;background:#fffbeccc;
+      backdrop-filter:blur(6px);padding:10px;border:1px solid var(--line);border-radius:12px;margin-top:12px
+    }
     body.zooming .sticky-bar{display:none}
+
     .error{border-left:4px solid #ef4444;background:#fff1f2;padding:10px 12px;border-radius:10px;color:#7f1d1d}
     .okmsg{border-left:4px solid #16a34a;background:#ecfdf5;padding:10px 12px;border-radius:10px;color:#064e3b}
+
+    /* मोबाइल पर file input छिपा रहे — सिर्फ कैमरा */
     @media (max-width:640px){ #fileRow{display:none} }
+
+    /* Lightbox */
     .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
     .lightbox.show{display:flex}
     .lightbox img{max-width:95vw;max-height:88vh;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,.35)}
@@ -61,15 +76,14 @@
     .lb-next{right:14px}
   </style>
 
-  <!-- CONFIG -->
+  <!-- CONFIG (same keys as आपकी मौजूदा फाइल) -->
   <script>
-    // IMPORTANT: BASE must be the API ROOT (e.g., https://xyz.execute-api.ap-south-1.amazonaws.com/prod)
     window.API = {
-      BASE: "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search",          // <-- fill with API root only (no trailing /search)
-      LINK_ID: "",       // or leave "", and set DEFAULT_FOLDER below
+      BASE: "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search",
+      LINK_ID: "3ff7e052ee37",
       DEFAULT_FOLDER: "common",
-      THRESHOLD: 85,     // friendlier default
-      LIMIT: 500         // how many to render in first paint from /search/full
+      THRESHOLD: 95,
+      MAX_RESULTS: 96
     };
   </script>
 </head>
@@ -81,42 +95,52 @@
     </header>
 
     <div class="row">
+      <!-- Left: Camera / File pick -->
       <section class="card">
         <div class="h1">फोटो चुनें या कैमरा से कैप्चर</div>
+
         <div class="media" id="mediaBox">
           <video id="video" playsinline></video>
           <img id="preview" alt="preview" style="display:none" />
         </div>
+
         <div class="stack" style="margin:12px 0 8px">
           <button class="btn ghost" id="btnStart">Start Camera</button>
           <button class="btn ghost" id="btnSnap" disabled>Capture</button>
           <button class="btn ghost" id="btnStop" disabled>Stop</button>
         </div>
+
         <div id="fileRow" class="stack" style="margin-top:6px">
           <input type="file" id="file" accept="image/*" multiple />
           <span class="note">* On mobile this is hidden — capture selfie to search</span>
         </div>
       </section>
 
+      <!-- Right: Selected + Search -->
       <section class="card">
         <div class="stack" style="justify-content:space-between">
           <div class="h1">Selected Photo <span class="pill muted">latest</span></div>
           <span class="pill" id="folderInfo">folder: link</span>
         </div>
+
         <div class="media"><img id="selected" alt="selected" /></div>
+
         <div class="stack" style="margin:12px 0 6px">
           <button class="btn primary" id="btnSearch" disabled>Search</button>
           <button class="btn ghost" id="btnClear">Clear</button>
           <span class="pill" id="cfgInfo"></span>
         </div>
-        <div class="note">API root:
+
+        <div class="note">API:
           <input id="apiField" type="text" readonly />
         </div>
       </section>
     </div>
 
+    <!-- Results -->
     <section class="card" style="margin-top:16px">
       <div class="h1">Results</div>
+
       <div class="stack" style="align-items:center;justify-content:space-between;margin-bottom:10px">
         <div class="stack">
           <label class="pill">Page size
@@ -130,7 +154,6 @@
           <button class="btn ghost" id="btnPrev" disabled>◀︎ Prev</button>
           <span class="pill" id="pageBadge">1 / 1</span>
           <button class="btn ghost" id="btnNext" disabled>Next ▶︎</button>
-          <button class="btn ghost" id="btnLoadMore" disabled>Load more</button>
         </div>
       </div>
 
@@ -150,6 +173,7 @@
     </section>
   </div>
 
+  <!-- Lightbox -->
   <div id="lightbox" class="lightbox" aria-hidden="true">
     <div class="lb-close" id="lbClose" title="Close">×</div>
     <div class="lb-nav lb-prev" id="lbPrev" title="Previous">‹</div>
@@ -160,11 +184,11 @@
   <script>
     /* ---------- Config ---------- */
     const qs = new URLSearchParams(location.search);
-    const API_ROOT = (qs.get("base") || (window.API && window.API.BASE) || "").replace(/\/$/, "");
+    const BASE = (qs.get("base") || (window.API && window.API.BASE) || "").replace(/\/$/, "");
     const LINK_ID = qs.get("link") || (window.API && window.API.LINK_ID) || "";
     const DEFAULT_FOLDER = qs.get("folder") || (window.API && window.API.DEFAULT_FOLDER) || "common";
-    const THRESHOLD = Number(qs.get("threshold")) || (window.API && window.API.THRESHOLD) || 85;
-    const LIMIT = Number(qs.get("limit")) || (window.API && window.API.LIMIT) || 500;
+    const THRESHOLD = Number(qs.get("threshold")) || (window.API && window.API.THRESHOLD) || 95;
+    const MAX_RESULTS = Number(qs.get("max")) || (window.API && window.API.MAX_RESULTS) || 96;
 
     /* ---------- DOM ---------- */
     const video   = document.getElementById('video');
@@ -186,7 +210,6 @@
     const countBadge = document.getElementById('countBadge');
     const btnPrev = document.getElementById('btnPrev');
     const btnNext = document.getElementById('btnNext');
-    const btnLoadMore = document.getElementById('btnLoadMore');
     const btnSelectAll = document.getElementById('btnSelectAll');
     const btnUnselectAll = document.getElementById('btnUnselectAll');
     const btnDownloadSel = document.getElementById('btnDownloadSel');
@@ -197,17 +220,17 @@
     const lbPrev  = document.getElementById('lbPrev');
     const lbNext  = document.getElementById('lbNext');
 
-    apiField.value = API_ROOT || "(missing)";
-    cfgInfo.textContent = LINK_ID ? `linkId: ${LINK_ID}, limit=${LIMIT}` : `folder: ${DEFAULT_FOLDER}, limit=${LIMIT}`;
+    apiField.value = BASE || "(missing)";
+    cfgInfo.textContent = LINK_ID ? `linkId: ${LINK_ID}, max=${MAX_RESULTS}` : `folder: ${DEFAULT_FOLDER}, max=${MAX_RESULTS}`;
     folderInfo.textContent = LINK_ID ? "folder: link" : `folder: ${DEFAULT_FOLDER}`;
 
     /* ---------- Camera ---------- */
-    let stream = null, currentDataUrl = "";
+    let stream = null, currentDataUrl = "";  // यही dataUrl search में जाएगा
 
     function setSelected(dataUrl){
       currentDataUrl = dataUrl || "";
       selected.src = dataUrl || "";
-      btnSearch.disabled = !dataUrl || !API_ROOT;
+      btnSearch.disabled = !dataUrl || !BASE;
     }
     function toDataURLFromFile(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f);}); }
 
@@ -221,35 +244,42 @@
       }catch{ alert("Camera not available. Please allow permission."); }
     }
     function stopCam(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } btnSnap.disabled=true; btnStop.disabled=true; video.style.display="none"; }
+
+    // कैप्चर: नया विंडो नहीं—यहीं preview
     function snap(){
       if (!video.videoWidth) return;
       const c=document.createElement('canvas'); c.width=video.videoWidth; c.height=video.videoHeight;
       c.getContext('2d').drawImage(video,0,0,c.width,c.height);
       const dataUrl=c.toDataURL('image/jpeg',.92);
-      preview.src=dataUrl; preview.style.display=""; video.style.display="none";
-      setSelected(dataUrl);
+      preview.src=dataUrl;
+      preview.style.display=""; video.style.display="none";
+      setSelected(dataUrl);  // चुनी गई फोटो अपडेट
     }
-    btnStart.onclick=startCam; btnStop.onclick=stopCam; btnSnap.onclick=snap;
-    if (file){ file.onchange = async (ev)=>{ const f=ev.target.files?.[0]; if(!f) return; setSelected(await toDataURLFromFile(f)); }; }
+
+    btnStart.onclick=startCam;
+    btnStop.onclick=stopCam;
+    btnSnap.onclick=snap;
+
+    // Desktop पर file input allow; mobile पर CSS से hidden
+    if (file){
+      file.onchange = async (ev)=>{ const f=ev.target.files?.[0]; if(!f) return; setSelected(await toDataURLFromFile(f)); };
+    }
     btnClear.onclick = ()=> setSelected("");
 
     /* ---------- Search + Pagination ---------- */
     let allResults = [];
-    let pendingMore = []; // from /search/full (keys only)
-    let linkContext = { linkId:null, allowedFolders:[] };
     let currentPage = 1;
     function pageSize(){ return Number(pageSizeSel.value)||24; }
 
     function updatePager(){
-      const total = allResults.length + pendingMore.length;
+      const total = allResults.length;
       const ps = pageSize();
-      const totalPages = Math.max(1, Math.ceil(allResults.length / ps));
+      const totalPages = Math.max(1, Math.ceil(total / ps));
       if (currentPage > totalPages) currentPage = totalPages;
       pageBadge.textContent = `${currentPage} / ${totalPages}`;
-      countBadge.textContent = `${allResults.length} shown • ${total} total`;
+      countBadge.textContent = `${total} results`;
       btnPrev.disabled = (currentPage<=1);
       btnNext.disabled = (currentPage>=totalPages);
-      btnLoadMore.disabled = pendingMore.length === 0;
 
       const anySel = document.querySelectorAll('.tile input[type=checkbox]:checked').length>0;
       btnDownloadSel.disabled = !anySel;
@@ -260,6 +290,7 @@
       const ps = pageSize();
       const start = (currentPage-1)*ps;
       const slice = allResults.slice(start, start+ps);
+
       resultsEl.innerHTML = slice.map((x,i)=>`
         <div class="tile" data-idx="${start+i}">
           <input type="checkbox" aria-label="select image" />
@@ -267,6 +298,8 @@
         </div>
       `).join("");
       resultsEl.style.display = slice.length ? "" : "none";
+
+      // selection & zoom binds
       resultsEl.querySelectorAll('.tile input[type=checkbox]').forEach(cb=>{
         cb.addEventListener('change',()=>{
           cb.closest('.tile').classList.toggle('selected', cb.checked);
@@ -291,7 +324,8 @@
     };
     document.getElementById('btnClearSel').onclick = document.getElementById('btnUnselectAll').onclick;
 
-    // De-dup ONLY by URL (do not perceptually dedupe by default, to avoid losing many similar shots)
+
+    // --- URL-based de-dup (ignore query params) ---
     function dedupeByUrl(items){
       const keep = new Map();
       for (const it of (items||[])){
@@ -303,6 +337,45 @@
       return Array.from(keep.values());
     }
 
+    // --- Perceptual de-dup helpers (aHash) ---
+    function hamming(a,b){ if(!a||!b||a.length!==b.length) return 64; let d=0; for(let i=0;i<a.length;i++) if(a[i]!==b[i]) d++; return d; }
+    function aHashFromUrl(url){
+      return new Promise((resolve)=>{
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          try{
+            const c = document.createElement("canvas");
+            const g = c.getContext("2d");
+            c.width = 8; c.height = 8;
+            g.drawImage(img, 0, 0, 8, 8);
+            const data = g.getImageData(0,0,8,8).data;
+            const gray = [];
+            for (let i=0;i<data.length;i+=4){
+              const r=data[i], gg=data[i+1], b=data[i+2];
+              gray.push(Math.round(0.299*r + 0.587*gg + 0.114*b));
+            }
+            const avg = gray.reduce((a,b)=>a+b,0)/gray.length;
+            let bits = ""; for (const v of gray) bits += v>avg ? "1" : "0";
+            resolve(bits);
+          }catch(e){ resolve(""); }
+        };
+        img.onerror = ()=> resolve("");
+        img.src = url;
+      });
+    }
+    async function dedupeByImageContent(items, getUrl = it => it.downloadUrl, threshold = 5){
+      const kept = [], hashes = [];
+      for (const it of (items||[])){
+        const url = (getUrl(it) || "").split("#")[0];
+        const hash = await aHashFromUrl(url);
+        let dup = false;
+        for (const h of hashes){ if (hamming(hash, h) <= threshold){ dup = true; break; } }
+        if (!dup){ kept.push(it); hashes.push(hash); }
+      }
+      return kept;
+    }
+    // चुने हुए को वाकई डाउनलोड कराएँ (नई टैब नहीं) – blob fetch
     function fileNameFromUrl(u){
       try{ return decodeURIComponent(new URL(u).pathname.split('/').pop()||'photo.jpg'); }catch{return 'photo.jpg'}
     }
@@ -324,86 +397,77 @@
       for (const url of selectedUrls){ try{ await forceDownload(url); }catch(e){ console.warn("download failed", url, e); } }
     };
 
-    async function presignMany(keys){
-      const body = { keys };
-      if (linkContext.linkId) body.linkId = linkContext.linkId;
-      else body.allowedFolders = linkContext.allowedFolders;
-
-      const r = await fetch(`${API_ROOT}/presign-many`, {
-        method:"POST", headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify(body)
-      });
-      if (!r.ok) throw new Error("presign failed");
-      const j = await r.json();
-      return j.results || [];
-    }
-
-    async function loadMore(batchSize = 300){
-      if (!pendingMore.length) return;
-      const take = pendingMore.splice(0, batchSize);
-      const keys = take.map(x => x.key);
-      const urls = await presignMany(keys);
-      // merge back similarity/folderId
-      const meta = new Map(take.map(x=>[x.key, x]));
-      const items = urls.map(u => ({
-        key: u.key,
-        folderId: meta.get(u.key)?.folderId || "",
-        similarity: meta.get(u.key)?.similarity || 0,
-        downloadUrl: u.downloadUrl
-      }));
-      allResults = allResults.concat(items);
-      renderPage();
-    }
-    btnLoadMore.onclick = ()=> loadMore(500);
-
     document.getElementById('btnSearch').onclick = async ()=>{
       if (!currentDataUrl){ alert("Pick/Capture a photo first."); return; }
-      if (!API_ROOT){ alert("API ROOT is missing."); return; }
+      if (!BASE){ alert("API BASE is missing."); return; }
 
       msg.textContent = "Searching..."; resultsEl.style.display="none"; resultsEl.innerHTML="";
-      allResults = []; pendingMore = []; currentPage = 1;
 
-      const body = { image: currentDataUrl, threshold: THRESHOLD, limit: LIMIT };
-      if (LINK_ID) { body.linkId = LINK_ID; linkContext = { linkId: LINK_ID, allowedFolders:[] }; }
-      else { body.allowedFolders = [DEFAULT_FOLDER]; linkContext = { linkId:null, allowedFolders:[DEFAULT_FOLDER] }; }
+      const body = { imageBase64: currentDataUrl, threshold: THRESHOLD, maxResults: MAX_RESULTS };
+      if (LINK_ID) body.linkId = LINK_ID; else body.allowedFolders = [DEFAULT_FOLDER];
 
       try{
-        // IMPORTANT: call the extended endpoint (no double "/search")
-        const r = await fetch(`${API_ROOT}/search/full`, {
-          method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body)
-        });
+        const r = await fetch(`${BASE}/search/full`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
         const j = await r.json().catch(()=> ({}));
 
         if (!r.ok){ msg.innerHTML = `<div class="error">Server Error (${r.status}).</div>`; console.warn(j); return; }
-        if (!j || (!Array.isArray(j.results))){ msg.innerHTML = `<div class="error">Unexpected response.</div>`; console.warn(j); return; }
+        if (!j || !Array.isArray(j.results)){ msg.innerHTML = `<div class="error">Unexpected response.</div>`; console.warn(j); return; }
 
-        // only URL-based de-dup (keep similar images)
-        allResults = dedupeByUrl(j.results || []);
-        pendingMore = Array.isArray(j.more) ? j.more : [];
-        msg.innerHTML = `<div class="okmsg">Found: ${j.countTotal||allResults.length}. Showing: ${allResults.length}.</div>`;
-
+        allResults = await dedupeByImageContent(dedupeByUrl(j.results || []), it => it.downloadUrl, 10);
+        if (j.count && j.count > allResults.length){
+          msg.innerHTML = `<div class="okmsg">Found: ${j.count}. Showing: ${allResults.length}. Need more? add <b>?max=500</b> in URL.</div>`;
+        } else {
+          msg.innerHTML = `<div class="okmsg">${allResults.length} matches.</div>`;
+        }
+        currentPage = 1;
         renderPage();
+
       }catch(err){
         console.error(err);
         msg.innerHTML = `<div class="error">Network/JSON error.</div>`;
       }
     };
 
-    // Lightbox
+    // ---------- Lightbox / Zoom with navigation ----------
     let lbIndex = -1;
-    function openLightbox(globalIdx){ lbIndex = globalIdx; updateLightbox(); document.body.classList.add('zooming'); lightbox.classList.add('show'); lightbox.setAttribute('aria-hidden','false'); }
-    function closeLightbox(){ lightbox.classList.remove('show'); document.body.classList.remove('zooming'); lightbox.setAttribute('aria-hidden','true'); lightImg.src = ""; }
-    function updateLightbox(){ const item = allResults[lbIndex]; if (!item){ closeLightbox(); return; } lightImg.src = item.downloadUrl || ""; }
-    function step(delta){ const total = allResults.length; if (!total) return; lbIndex = (lbIndex + delta + total) % total; updateLightbox(); }
-    document.getElementById('lbClose').onclick = closeLightbox;
-    document.getElementById('lbPrev').onclick  = ()=> step(-1);
-    document.getElementById('lbNext').onclick  = ()=> step(+1);
+    function openLightbox(globalIdx){
+      lbIndex = globalIdx;
+      updateLightbox();
+      document.body.classList.add('zooming');
+      lightbox.classList.add('show');
+      lightbox.setAttribute('aria-hidden','false');
+    }
+    function closeLightbox(){
+      lightbox.classList.remove('show');
+      document.body.classList.remove('zooming');
+      lightbox.setAttribute('aria-hidden','true');
+      lightImg.src = "";
+    }
+    function updateLightbox(){
+      const item = allResults[lbIndex];
+      if (!item){ closeLightbox(); return; }
+      lightImg.src = item.downloadUrl || "";
+    }
+    function step(delta){
+      const total = allResults.length;
+      if (!total) return;
+      lbIndex = (lbIndex + delta + total) % total;
+      updateLightbox();
+    }
+    lbClose.onclick = closeLightbox;
+    lbPrev.onclick  = ()=> step(-1);
+    lbNext.onclick  = ()=> step(+1);
     lightbox.addEventListener('click',(e)=>{ if(e.target===lightbox) closeLightbox(); });
-    window.addEventListener('keydown',(e)=>{ if(!lightbox.classList.contains('show')) return; if(e.key==='Escape') closeLightbox(); if(e.key==='ArrowLeft') step(-1); if(e.key==='ArrowRight') step(+1); });
+    window.addEventListener('keydown',(e)=>{
+      if(!lightbox.classList.contains('show')) return;
+      if(e.key==='Escape') closeLightbox();
+      if(e.key==='ArrowLeft') step(-1);
+      if(e.key==='ArrowRight') step(+1);
+    });
 
     // init
-    document.getElementById('apiField').value = API_ROOT || "(missing)";
-    document.getElementById('cfgInfo').textContent = LINK_ID ? `linkId: ${LINK_ID}, limit=${LIMIT}` : `folder: ${DEFAULT_FOLDER}, limit=${LIMIT}`;
+    document.getElementById('apiField').value = BASE || "(missing)";
+    document.getElementById('cfgInfo').textContent = LINK_ID ? `linkId: ${LINK_ID}, max=${MAX_RESULTS}` : `folder: ${DEFAULT_FOLDER}, max=${MAX_RESULTS}`;
     document.getElementById('folderInfo').textContent = LINK_ID ? "folder: link" : `folder: ${DEFAULT_FOLDER}`;
     (function(){ selected.src=""; })();
   </script>
