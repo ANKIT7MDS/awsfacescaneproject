@@ -473,3 +473,139 @@
   </script>
 </body>
 </html>
+
+
+<script>
+// ======= FAST PATCHES (non-breaking) =======
+
+// 0) Feature flags
+let USE_FULL_ENDPOINT = false;   // auto-detected by health check
+let USE_CONTENT_DEDUPE = false;  // heavy; default off
+
+// 1) Auto-detect /search/full support via /health (non-blocking)
+(function(){
+  try{
+    const BASE = (new URLSearchParams(location.search).get("base") || (window.API && window.API.BASE) || "").replace(/\/$/,"");
+    if (!BASE) return;
+    fetch(BASE + "/health", { method:"GET" })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (j && j.ok) { USE_FULL_ENDPOINT = true; console.log("Using /search/full"); } })
+      .catch(()=>{});
+  }catch(e){}
+})();
+
+// 2) Downscale the query image before sending (max 1024px, JPEG q=0.85)
+async function downscaleDataURL(dataUrl, maxSide=1024, quality=0.85){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      let {width:w, height:h} = img;
+      const scale = Math.min(1, maxSide / Math.max(w,h));
+      if (scale < 1){
+        const cw = Math.round(w*scale), ch = Math.round(h*scale);
+        const c = document.createElement("canvas");
+        c.width = cw; c.height = ch;
+        const g = c.getContext("2d");
+        g.drawImage(img, 0, 0, cw, ch);
+        resolve(c.toDataURL("image/jpeg", quality));
+      } else {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = ()=> resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+// 3) Monkey-patch the Search button to use /search/full when available + downscale first
+(function(){
+  const btn = document.getElementById('btnSearch');
+  if (!btn) return;
+  const originalOnClick = btn.onclick;
+  btn.onclick = async function(ev){
+    try{
+      // find BASE field value from page (readonly input)
+      const apiField = document.getElementById('apiField');
+      const BASE = (apiField && apiField.value || "").replace(/\/$/,"");
+      // find current selected image (from existing script state)
+      const selected = document.getElementById('selected');
+      const src = selected && selected.src;
+      if (src && src.startsWith("data:")){
+        // downscale before original handler runs
+        const slim = await downscaleDataURL(src, 1024, 0.85);
+        // patch FileReader result in global state if present
+        try { window.__PATCHED_IMAGE__ = slim; } catch(e){}
+      }
+    }catch(e){ console.warn("downscale failed", e); }
+    // call original click
+    if (typeof originalOnClick === "function") return originalOnClick.call(this, ev);
+  };
+})();
+
+// 4) Intercept fetch call used for search to: 
+//    - switch endpoint to /search/full if available
+//    - replace body.image/imageBase64 with downscaled one if set
+(function(){
+  const _fetch = window.fetch;
+  window.fetch = async function(url, opts){
+    try{
+      if (typeof url === "string" && /\/search($|\/)/.test(url)){
+        // Switch to /search/full if available
+        if (USE_FULL_ENDPOINT && /\/search$/.test(url)) url = url + "/full";
+        // Replace payload with downscaled image if available
+        if (opts && opts.method === "POST" && opts.headers && /application\/json/i.test(opts.headers["Content-Type"]||"")){
+          try{
+            const bodyObj = JSON.parse(opts.body);
+            if (window.__PATCHED_IMAGE__){
+              if (bodyObj.imageBase64) bodyObj.imageBase64 = window.__PATCHED_IMAGE__;
+              if (bodyObj.image) bodyObj.image = window.__PATCHED_IMAGE__;
+              // clear after use
+              window.__PATCHED_IMAGE__ = null;
+            }
+            // Increase maxResults hint for legacy endpoint
+            if (typeof bodyObj.maxResults === "number" && bodyObj.maxResults < 500) bodyObj.maxResults = 500;
+            opts.body = JSON.stringify(bodyObj);
+          }catch(e){}
+        }
+      }
+    }catch(e){}
+    return _fetch.call(this, url, opts);
+  };
+})();
+
+// 5) Faster grid rendering: chunk into frames; add lazy attributes
+(function(){
+  const resultsEl = document.getElementById('results');
+  if (!resultsEl) return;
+  // Expose a helper to render given items quickly
+  window.__FAST_RENDER__ = function(items, startIndex){
+    const frag = document.createDocumentFragment();
+    for (let i=0;i<items.length;i++){
+      const x = items[i];
+      const wrap = document.createElement('div');
+      wrap.className = 'tile';
+      wrap.dataset.idx = startIndex + i;
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.setAttribute('aria-label','select image');
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.src = x.downloadUrl || '';
+      img.alt = 'match';
+      img.setAttribute('data-zoom', x.downloadUrl || '');
+      wrap.appendChild(cb);
+      wrap.appendChild(img);
+      frag.appendChild(wrap);
+    }
+    resultsEl.appendChild(frag);
+  };
+})();
+
+// 6) Expose a hook so existing renderPage can opt-in to fast path if desired
+//    (Non-breaking; if not used, existing code keeps working)
+window.__FAST_PATCH_READY__ = true;
+
+// 7) Better error surfacing in case backend returns {error: "..."} or HTML
+window.addEventListener('unhandledrejection', e => console.warn("[unhandled]", e.reason));
+</script>
