@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>सेल्फी सत्यापन</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- JSZip और FileSaver.js लाइब्रेरी जोड़ें -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        :root {
+            --bg: #fff8f1;
+            --brand: #ff7a00;
+            --brand-light: #ff9e3d;
+            --text-dark: #1e1b16;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+        }
+        .card {
+            background-color: #ffffff;
+        }
+        .btn {
+            appearance: none;
+            border: 0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform .05s ease, box-shadow .2s;
+        }
+        .btn.primary {
+            background: linear-gradient(180deg, var(--brand), var(--brand-light));
+            color: white;
+            box-shadow: 0 8px 24px rgba(255, 122, 0, .18);
+        }
+        .btn.ghost {
+            background: #fff;
+            color: var(--brand);
+            border: 1px solid var(--brand);
+        }
+        .media {
+            aspect-ratio: 4/3;
+            background: #fff;
+            border: 1px dashed #f1e6d8;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .media video, .media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+        .thumbnail {
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out;
+            border: 2px solid transparent;
+        }
+        .thumbnail:hover {
+            transform: scale(1.05);
+        }
+        .thumbnail.selected {
+            border-color: var(--brand);
+            box-shadow: 0 0 10px rgba(255, 122, 0, 0.5);
+        }
+
+        /* Lightbox styles */
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+        .lightbox.show {
+            display: flex;
+        }
+        .lightbox-content {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            align-items: center;
+            max-width: 90%;
+            max-height: 90%;
+        }
+        .lightbox-content img {
+            max-width: 100%;
+            max-height: 80vh;
+            border-radius: 12px;
+        }
+        .lightbox-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .lightbox-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2rem;
+            color: white;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <!-- Configuration from user's file -->
+    <script>
+        window.API = {
+            BASE: "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search",
+            LINK_ID: "3ff7e052ee37",
+            DEFAULT_FOLDER: "common",
+            THRESHOLD: 95,
+            MAX_RESULTS: 200
+        };
+    </script>
+
+    <!-- Main Container Card -->
+    <div id="main-ui" class="card w-full max-w-sm p-6 sm:p-8 rounded-xl shadow-lg border border-orange-200">
+
+        <!-- Header -->
+        <header class="text-center mb-6">
+            <h1 class="text-lg font-bold text-orange-600">भारतीय जनता पार्टी जिला मंदसौर</h1>
+            <p class="text-sm text-gray-500">माननीय जिला अध्यक्ष जी एवं भाजपा के विभिन्न कार्यक्रम के आप के फोटो प्राप्त करने के लिए अपनी सेल्फी स्कैन करें</p>
+        </header>
+
+        <!-- Splash / Landing Screen -->
+        <div id="splash-screen" class="flex flex-col items-center justify-center text-center">
+            <h1 class="text-3xl sm:text-4xl font-bold text-orange-600 mb-2">सेल्फी सत्यापन</h1>
+            <p class="text-gray-600 mb-8">अपनी पहचान की पुष्टि करने के लिए एक सेल्फी लें।</p>
+            <button id="start-button" class="w-full btn primary">
+                कैमरा शुरू करें
+            </button>
+        </div>
+
+        <!-- Camera Screen -->
+        <div id="camera-screen" class="hidden flex flex-col items-center justify-center">
+            <h2 class="text-2xl font-bold text-orange-600 mb-4">सेल्फी लें</h2>
+            <div class="media relative w-full mb-6">
+                <video id="video-feed" playsinline class="hidden"></video>
+                <img id="preview-image" alt="Preview" class="hidden" />
+                <span id="camera-placeholder" class="text-gray-400">कैमरा शुरू हो रहा है...</span>
+            </div>
+            
+            <div class="flex space-x-4 w-full justify-center">
+                <button id="capture-button" class="flex-1 btn primary" disabled>
+                    कैप्चर करें
+                </button>
+                <button id="retake-button" class="flex-1 btn ghost hidden">
+                    पुनः प्रयास करें
+                </button>
+            </div>
+        </div>
+        
+        <!-- Processing / Loading Screen -->
+        <div id="processing-screen" class="hidden flex-col items-center justify-center text-center">
+            <svg class="animate-spin h-16 w-16 text-orange-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-lg font-semibold text-gray-700">आपके फोटो खोजे जा रहे हैं...</p>
+            <p class="text-sm text-gray-500 mt-2">इसमें कुछ सेकंड लग सकते हैं।</p>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="result-screen" class="hidden flex-col items-center justify-center text-center">
+            <h2 class="text-2xl font-bold text-orange-600 mb-4">डेटाबेस में उपलब्ध आपके फोटो</h2>
+            <div id="results-grid" class="grid grid-cols-3 gap-2 w-full mb-6 max-h-96 overflow-y-auto p-2">
+                <!-- Thumbnails will be populated here -->
+            </div>
+            <p id="no-results" class="text-gray-500 hidden">कोई परिणाम नहीं मिला।</p>
+        </div>
+    </div>
+
+    <!-- Message Box -->
+    <div id="message-box" class="message-box hidden bg-gray-800 text-white p-4 rounded-lg shadow-xl text-center">
+        <p id="message-text"></p>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox" class="lightbox">
+        <div class="lightbox-content">
+            <img id="lightbox-image" src="" alt="Full size result" class="rounded-xl">
+            <button id="download-lightbox-button" class="btn primary">
+                फोटो डाउनलोड करें
+            </button>
+        </div>
+        <button id="lightbox-close" class="lightbox-btn lightbox-close">&times;</button>
+        <div class="lightbox-nav">
+            <button id="lightbox-prev" class="lightbox-btn">&lt;</button>
+            <button id="lightbox-next" class="lightbox-btn">&gt;</button>
+        </div>
+    </div>
+
+    <script>
+        // Handle unhandled promise rejections to prevent silent errors
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('An unhandled promise rejection occurred:', event.reason);
+        });
+
+        // API Configuration (from user's uploaded file)
+        const BASE = window.API.BASE.replace(/\/$/, "");
+        const LINK_ID = window.API.LINK_ID;
+        const THRESHOLD = window.API.THRESHOLD;
+        const MAX_RESULTS = window.API.MAX_RESULTS;
+
+        // UI elements
+        const splashScreen = document.getElementById('splash-screen');
+        const cameraScreen = document.getElementById('camera-screen');
+        const processingScreen = document.getElementById('processing-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const startButton = document.getElementById('start-button');
+        const videoFeed = document.getElementById('video-feed');
+        const previewImage = document.getElementById('preview-image');
+        const cameraPlaceholder = document.getElementById('camera-placeholder');
+        const captureButton = document.getElementById('capture-button');
+        const retakeButton = document.getElementById('retake-button');
+        const resultsGrid = document.getElementById('results-grid');
+        const noResultsMessage = document.getElementById('no-results');
+        const messageBox = document.getElementById('message-box');
+        const messageText = document.getElementById('message-text');
+
+        // Lightbox elements
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImage = document.getElementById('lightbox-image');
+        const downloadLightboxButton = document.getElementById('download-lightbox-button');
+        const lightboxClose = document.getElementById('lightbox-close');
+        const lightboxPrev = document.getElementById('lightbox-prev');
+        const lightboxNext = document.getElementById('lightbox-next');
+
+        // State variables
+        let stream = null;
+        let capturedImageBlob = null;
+        const canvas = document.createElement('canvas');
+        let allResults = [];
+        let lbIndex = -1;
+
+        // Function to show a specific screen and hide others
+        function showScreen(screen) {
+            splashScreen.classList.add('hidden');
+            cameraScreen.classList.add('hidden');
+            processingScreen.classList.add('hidden');
+            resultScreen.classList.add('hidden');
+            screen.classList.remove('hidden');
+        }
+
+        // Custom function to show messages
+        function showMessage(text, duration = 3000) {
+            messageText.innerText = text;
+            messageBox.classList.remove('hidden');
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, duration);
+        }
+
+        // Start camera feed
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                videoFeed.srcObject = stream;
+                videoFeed.onloadedmetadata = () => {
+                    videoFeed.play();
+                    videoFeed.classList.remove('hidden');
+                    cameraPlaceholder.classList.add('hidden');
+                    captureButton.disabled = false;
+                };
+            } catch (err) {
+                console.error("Camera access denied:", err);
+                showMessage('कैमरा उपलब्ध नहीं है। कृपया अनुमति दें।');
+                cameraPlaceholder.textContent = 'कैमरा उपलब्ध नहीं है।';
+            }
+        }
+
+        // Stop camera feed
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+        }
+
+        // Capture photo
+        function capturePhoto() {
+            if (!videoFeed.videoWidth) {
+                showMessage('वीडियो स्ट्रीम उपलब्ध नहीं है।');
+                return;
+            }
+            canvas.width = videoFeed.videoWidth;
+            canvas.height = videoFeed.videoHeight;
+            canvas.getContext('2d').drawImage(videoFeed, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                capturedImageBlob = blob;
+                previewImage.src = URL.createObjectURL(blob);
+                previewImage.classList.remove('hidden');
+                videoFeed.classList.add('hidden');
+                captureButton.classList.add('hidden');
+                retakeButton.classList.remove('hidden');
+                submitPhoto();
+            }, 'image/jpeg', 0.92);
+        }
+
+        // Submit photo to backend
+        async function submitPhoto() {
+            if (!capturedImageBlob) {
+                showMessage('कोई फोटो कैप्चर नहीं की गई।');
+                return;
+            }
+
+            stopCamera();
+            showScreen(processingScreen);
+
+            const reader = new FileReader();
+            reader.readAsDataURL(capturedImageBlob);
+            reader.onloadend = async () => {
+                const base64data = reader.result.split(',')[1];
+                const body = {
+                    imageBase64: base64data,
+                    threshold: THRESHOLD,
+                    maxResults: MAX_RESULTS,
+                };
+                
+                if (LINK_ID) {
+                    body.linkId = LINK_ID;
+                } else {
+                    body.allowedFolders = [window.API.DEFAULT_FOLDER];
+                }
+
+                try {
+                    const response = await fetch(`${BASE}/search`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(body),
+                    });
+
+                    const result = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(result.error || `Server returned status ${response.status}`);
+                    }
+
+                    allResults = result.results || [];
+                    displayResults();
+
+                } catch (error) {
+                    console.error("API Error:", error);
+                    showMessage('सत्यापन में कोई समस्या आई। कृपया फिर से प्रयास करें।');
+                    displayResults();
+                }
+            };
+        }
+
+        // Display results as thumbnails
+        function displayResults() {
+            resultsGrid.innerHTML = '';
+            if (allResults.length === 0) {
+                noResultsMessage.classList.remove('hidden');
+            } else {
+                noResultsMessage.classList.add('hidden');
+                allResults.forEach((result, index) => {
+                    const img = document.createElement('img');
+                    img.src = result.thumbnailUrl || result.downloadUrl;
+                    img.alt = 'Match Result';
+                    img.className = 'w-full h-auto rounded thumbnail';
+                    img.dataset.index = index;
+
+                    img.addEventListener('click', () => {
+                        showLightbox(index);
+                    });
+                    resultsGrid.appendChild(img);
+                });
+            }
+            showScreen(resultScreen);
+        }
+
+        // Lightbox functions
+        function showLightbox(index) {
+            lbIndex = index;
+            updateLightbox();
+            lightbox.classList.add('show');
+        }
+
+        function closeLightbox() {
+            lightbox.classList.remove('show');
+        }
+
+        function updateLightbox() {
+            const item = allResults[lbIndex];
+            if (item) {
+                lightboxImage.src = item.downloadUrl || item.thumbnailUrl;
+                downloadLightboxButton.onclick = () => downloadImage(item.downloadUrl);
+            } else {
+                closeLightbox();
+            }
+        }
+
+        function step(delta) {
+            const total = allResults.length;
+            if (total === 0) return;
+            lbIndex = (lbIndex + delta + total) % total;
+            updateLightbox();
+        }
+
+        async function downloadImage(url) {
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                saveAs(blob, `photo_${Date.now()}.jpg`);
+                showMessage('फोटो सफलतापूर्वक डाउनलोड हो गया!');
+            } catch (error) {
+                console.error("Download failed:", error);
+                showMessage('डाउनलोड विफल रहा। कृपया पुनः प्रयास करें।');
+            }
+        }
+
+        // Event listeners
+        startButton.addEventListener('click', () => {
+            showScreen(cameraScreen);
+            startCamera();
+        });
+
+        captureButton.addEventListener('click', capturePhoto);
+
+        retakeButton.addEventListener('click', () => {
+            stopCamera();
+            previewImage.classList.add('hidden');
+            videoFeed.classList.remove('hidden');
+            captureButton.classList.remove('hidden');
+            retakeButton.classList.add('hidden');
+            startCamera();
+        });
+
+        // Lightbox event listeners
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightboxPrev.addEventListener('click', () => step(-1));
+        lightboxNext.addEventListener('click', () => step(1));
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                closeLightbox();
+            }
+        });
+        window.addEventListener('keydown', (e) => {
+            if (lightbox.classList.contains('show')) {
+                if (e.key === 'Escape') closeLightbox();
+                if (e.key === 'ArrowLeft') step(-1);
+                if (e.key === 'ArrowRight') step(1);
+            }
+        });
+    </script>
+</body>
+</html>
