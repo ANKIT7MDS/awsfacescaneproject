@@ -27,8 +27,8 @@
         .btn {
             appearance: none;
             border: 0;
-            border-radius: 12px;
-            padding: 12px 16px;
+            border-radius: 8px; /* Slightly smaller button radius */
+            padding: 8px 12px; /* Smaller padding */
             font-weight: 700;
             cursor: pointer;
             transition: transform .05s ease, box-shadow .2s;
@@ -141,18 +141,18 @@
         }
         /* Style for pagination buttons */
         .pagination-btn {
-            padding: 8px 16px;
+            padding: 6px 12px; /* Reduced padding */
             border-radius: 8px;
             font-weight: 600;
             background-color: var(--brand);
             color: white;
+            font-size: 0.875rem; /* Small font size */
         }
         .pagination-btn:disabled {
             background-color: #ccc;
             cursor: not-allowed;
         }
-
-        /* Full-screen layout for mobile */
+        /* Mobile specific adjustments */
         @media (max-width: 640px) {
             body {
                 background-color: #ffffff;
@@ -173,6 +173,17 @@
                 max-height: none;
                 overflow-y: auto;
                 grid-template-columns: repeat(2, 1fr);
+                gap: 8px; /* Reduced gap between images */
+            }
+            .result-header {
+                margin-bottom: 8px; /* Smaller margin below header */
+            }
+            .result-header h2 {
+                font-size: 1.25rem; /* Smaller font for title */
+                margin-bottom: 4px; /* Reduced margin */
+            }
+            .result-header p {
+                font-size: 0.875rem; /* Smaller font for count */
             }
         }
     </style>
@@ -192,12 +203,6 @@
 
     <!-- Main Container Card -->
     <div id="main-ui" class="card w-full max-w-lg p-6 sm:p-8 rounded-xl shadow-lg border border-orange-200">
-
-        <!-- Header -->
-        <header class="text-center mb-6">
-            <h1 class="text-lg font-bold text-orange-600">भारतीय जनता पार्टी जिला मंदसौर</h1>
-            <p class="text-sm text-gray-500">माननीय जिला अध्यक्ष जी एवं भाजपा के विभिन्न कार्यक्रम के आप के फोटो प्राप्त करने के लिए अपनी सेल्फी स्कैन करें</p>
-        </header>
 
         <!-- Splash / Landing Screen -->
         <div id="splash-screen" class="flex flex-col items-center justify-center text-center">
@@ -239,8 +244,10 @@
 
         <!-- Result Screen -->
         <div id="result-screen" class="hidden flex-col items-center justify-center text-center">
-            <h2 class="text-2xl font-bold text-orange-600 mb-4">डेटाबेस में उपलब्ध आपके फोटो</h2>
-            <p id="results-count" class="text-gray-600 mb-4 text-sm"></p>
+            <div class="result-header">
+                <h2 class="text-xl font-bold text-orange-600">डेटाबेस में उपलब्ध आपके फोटो</h2>
+                <p id="results-count" class="text-gray-600 mt-1 text-sm"></p>
+            </div>
             
             <div id="results-grid" class="grid grid-cols-2 md:grid-cols-3 gap-2 w-full mb-6 max-h-96 overflow-y-auto p-2">
                 <!-- Thumbnails will be populated here -->
