@@ -207,7 +207,9 @@
         <!-- Splash / Landing Screen -->
         <div id="splash-screen" class="flex flex-col items-center justify-center text-center">
             <h1 class="text-3xl sm:text-4xl font-bold text-orange-600 mb-2">सेल्फी सत्यापन</h1>
-            <p class="text-gray-600 mb-8">अपनी पहचान की पुष्टि करने के लिए एक सेल्फी लें।</p>
+            <p class="text-gray-600 mb-8 font-semibold">
+                भारतीय जनता पार्टी जिला मंदसौर "माननीय जिला अध्यक्ष जी के साथ एवं भाजपा के विभिन्न कार्यक्रमों से सम्बंधित आप के फोटो यहाँ से प्राप्त करे"
+            </p>
             <button id="start-button" class="w-full btn primary">
                 कैमरा शुरू करें
             </button>
@@ -245,11 +247,12 @@
         <!-- Result Screen -->
         <div id="result-screen" class="hidden flex-col items-center justify-center text-center">
             <div class="result-header">
-                <h2 class="text-xl font-bold text-orange-600">डेटाबेस में उपलब्ध आपके फोटो</h2>
-                <p id="results-count" class="text-gray-600 mt-1 text-sm"></p>
+                <h2 class="text-xl font-bold text-orange-600 mb-0">भारतीय जनता पार्टी मंदसौर</h2>
+                <p class="text-md font-semibold text-gray-700 mt-2">डेटाबेस में उपलब्ध आपके फोटो</p>
+                <p id="results-count" class="text-gray-600 mt-1 text-sm mb-2"></p>
             </div>
             
-            <div id="results-grid" class="grid grid-cols-2 md:grid-cols-3 gap-2 w-full mb-6 max-h-96 overflow-y-auto p-2">
+            <div id="results-grid" class="grid grid-cols-2 md:grid-cols-3 gap-2 w-full mb-6 max-h-[70vh] overflow-y-auto p-2">
                 <!-- Thumbnails will be populated here -->
             </div>
             <p id="no-results" class="text-gray-500 hidden">कोई परिणाम नहीं मिला।</p>
