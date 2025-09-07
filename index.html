@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>सेल्फी सत्यापन</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- JSZip और FileSaver.js लाइब्रेरी जोड़ें -->
+    <!-- JSZip and FileSaver.js Libraries for Single File Download -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
@@ -19,6 +19,7 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg);
+            touch-action: pan-y; /* Prevents unwanted horizontal swiping on some touch devices */
         }
         .card {
             background-color: #ffffff;
@@ -138,6 +139,18 @@
             font-size: 2rem;
             color: white;
         }
+        /* Style for pagination buttons */
+        .pagination-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            background-color: var(--brand);
+            color: white;
+        }
+        .pagination-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
@@ -154,12 +167,12 @@
     </script>
 
     <!-- Main Container Card -->
-    <div id="main-ui" class="card w-full max-w-sm p-6 sm:p-8 rounded-xl shadow-lg border border-orange-200">
+    <div id="main-ui" class="card w-full max-w-lg p-6 sm:p-8 rounded-xl shadow-lg border border-orange-200">
 
         <!-- Header -->
         <header class="text-center mb-6">
             <h1 class="text-lg font-bold text-orange-600">भारतीय जनता पार्टी जिला मंदसौर</h1>
-            <p class="text-sm text-gray-500">माननीय जिला अध्यक्ष जी के साथ एवं भाजपा के विभिन्न कार्यक्रम में आप के फोटो प्राप्त करने के लिए अपनी सेल्फी स्कैन करें</p>
+            <p class="text-sm text-gray-500">माननीय जिला अध्यक्ष जी एवं भाजपा के विभिन्न कार्यक्रम के आप के फोटो प्राप्त करने के लिए अपनी सेल्फी स्कैन करें</p>
         </header>
 
         <!-- Splash / Landing Screen -->
@@ -203,10 +216,19 @@
         <!-- Result Screen -->
         <div id="result-screen" class="hidden flex-col items-center justify-center text-center">
             <h2 class="text-2xl font-bold text-orange-600 mb-4">डेटाबेस में उपलब्ध आपके फोटो</h2>
-            <div id="results-grid" class="grid grid-cols-3 gap-2 w-full mb-6 max-h-96 overflow-y-auto p-2">
+            <p id="results-count" class="text-gray-600 mb-4 text-sm"></p>
+            
+            <div id="results-grid" class="grid grid-cols-2 md:grid-cols-3 gap-2 w-full mb-6 max-h-96 overflow-y-auto p-2">
                 <!-- Thumbnails will be populated here -->
             </div>
             <p id="no-results" class="text-gray-500 hidden">कोई परिणाम नहीं मिला।</p>
+
+            <!-- Pagination Controls -->
+            <div id="pagination-controls" class="flex justify-between items-center w-full max-w-xs mx-auto mt-4 hidden">
+                <button id="prev-page-btn" class="pagination-btn" disabled>&lt; पिछला</button>
+                <span id="page-info" class="text-sm text-gray-600"></span>
+                <button id="next-page-btn" class="pagination-btn" disabled>अगला &gt;</button>
+            </div>
         </div>
     </div>
 
@@ -241,6 +263,7 @@
         const LINK_ID = window.API.LINK_ID;
         const THRESHOLD = window.API.THRESHOLD;
         const MAX_RESULTS = window.API.MAX_RESULTS;
+        const RESULTS_PER_PAGE = 9; // Number of thumbnails to show per page
 
         // UI elements
         const splashScreen = document.getElementById('splash-screen');
@@ -255,9 +278,10 @@
         const retakeButton = document.getElementById('retake-button');
         const resultsGrid = document.getElementById('results-grid');
         const noResultsMessage = document.getElementById('no-results');
+        const resultsCountEl = document.getElementById('results-count');
         const messageBox = document.getElementById('message-box');
         const messageText = document.getElementById('message-text');
-
+        
         // Lightbox elements
         const lightbox = document.getElementById('lightbox');
         const lightboxImage = document.getElementById('lightbox-image');
@@ -266,11 +290,18 @@
         const lightboxPrev = document.getElementById('lightbox-prev');
         const lightboxNext = document.getElementById('lightbox-next');
 
+        // Pagination elements
+        const paginationControls = document.getElementById('pagination-controls');
+        const prevPageBtn = document.getElementById('prev-page-btn');
+        const nextPageBtn = document.getElementById('next-page-btn');
+        const pageInfo = document.getElementById('page-info');
+
         // State variables
         let stream = null;
         let capturedImageBlob = null;
         const canvas = document.createElement('canvas');
         let allResults = [];
+        let currentPage = 1;
         let lbIndex = -1;
 
         // Function to show a specific screen and hide others
@@ -377,6 +408,7 @@
                     }
 
                     allResults = result.results || [];
+                    currentPage = 1;
                     displayResults();
 
                 } catch (error) {
@@ -387,27 +419,49 @@
             };
         }
 
-        // Display results as thumbnails
+        // Display results with pagination
         function displayResults() {
-            resultsGrid.innerHTML = '';
             if (allResults.length === 0) {
                 noResultsMessage.classList.remove('hidden');
+                resultsCountEl.classList.add('hidden');
+                paginationControls.classList.add('hidden');
             } else {
                 noResultsMessage.classList.add('hidden');
-                allResults.forEach((result, index) => {
-                    const img = document.createElement('img');
-                    img.src = result.thumbnailUrl || result.downloadUrl;
-                    img.alt = 'Match Result';
-                    img.className = 'w-full h-auto rounded thumbnail';
-                    img.dataset.index = index;
-
-                    img.addEventListener('click', () => {
-                        showLightbox(index);
-                    });
-                    resultsGrid.appendChild(img);
-                });
+                resultsCountEl.classList.remove('hidden');
+                paginationControls.classList.remove('hidden');
+                resultsCountEl.textContent = `कुल ${allResults.length} फोटो मिले।`;
+                renderResultsPage();
             }
             showScreen(resultScreen);
+        }
+
+        function renderResultsPage() {
+            resultsGrid.innerHTML = '';
+            const startIndex = (currentPage - 1) * RESULTS_PER_PAGE;
+            const endIndex = startIndex + RESULTS_PER_PAGE;
+            const photosToDisplay = allResults.slice(startIndex, endIndex);
+
+            photosToDisplay.forEach((result, index) => {
+                const img = document.createElement('img');
+                img.src = result.thumbnailUrl || result.downloadUrl;
+                img.alt = `Match Result ${startIndex + index + 1}`;
+                img.className = 'w-full h-auto rounded thumbnail aspect-square object-cover';
+                img.dataset.index = startIndex + index;
+
+                img.addEventListener('click', () => {
+                    showLightbox(parseInt(img.dataset.index, 10));
+                });
+                resultsGrid.appendChild(img);
+            });
+
+            updatePaginationControls();
+        }
+
+        function updatePaginationControls() {
+            const totalPages = Math.ceil(allResults.length / RESULTS_PER_PAGE);
+            pageInfo.textContent = `पेज ${currentPage} / ${totalPages}`;
+            prevPageBtn.disabled = currentPage === 1;
+            nextPageBtn.disabled = currentPage >= totalPages;
         }
 
         // Lightbox functions
@@ -465,6 +519,24 @@
             captureButton.classList.remove('hidden');
             retakeButton.classList.add('hidden');
             startCamera();
+        });
+
+        // Pagination Event Listeners
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderResultsPage();
+                resultsGrid.scrollTop = 0; // Scroll to top of the grid
+            }
+        });
+
+        nextPageBtn.addEventListener('click', () => {
+            const totalPages = Math.ceil(allResults.length / RESULTS_PER_PAGE);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderResultsPage();
+                resultsGrid.scrollTop = 0; // Scroll to top of the grid
+            }
         });
 
         // Lightbox event listeners
