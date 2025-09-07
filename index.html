@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>सेल्फी सत्यापन</title>
+    <title>फोटो सत्यापन - भाजपा मंदसौर</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- JSZip and FileSaver.js Libraries for Single File Download -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         :root {
-            --bg: #fff8f1;
+            --bg: #f7f9fc;
             --brand: #ff7a00;
             --brand-light: #ff9e3d;
             --text-dark: #1e1b16;
@@ -19,24 +18,30 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg);
-            touch-action: pan-y; /* Prevents unwanted horizontal swiping on some touch devices */
+            touch-action: pan-y;
         }
         .card {
             background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            min-height: 500px;
         }
         .btn {
             appearance: none;
             border: 0;
-            border-radius: 8px; /* Slightly smaller button radius */
-            padding: 8px 12px; /* Smaller padding */
+            border-radius: 8px;
+            padding: 12px 20px;
             font-weight: 700;
             cursor: pointer;
-            transition: transform .05s ease, box-shadow .2s;
+            transition: transform .1s ease, box-shadow .2s;
+        }
+        .btn:active {
+            transform: scale(0.98);
         }
         .btn.primary {
             background: linear-gradient(180deg, var(--brand), var(--brand-light));
             color: white;
-            box-shadow: 0 8px 24px rgba(255, 122, 0, .18);
+            box-shadow: 0 8px 24px rgba(255, 122, 0, .22);
         }
         .btn.ghost {
             background: #fff;
@@ -46,7 +51,7 @@
         .media {
             aspect-ratio: 4/3;
             background: #fff;
-            border: 1px dashed #f1e6d8;
+            border: 2px dashed #e2e8f0;
             border-radius: 14px;
             display: flex;
             align-items: center;
@@ -67,130 +72,75 @@
         }
         .thumbnail {
             cursor: pointer;
-            transition: transform 0.2s ease-in-out;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             border: 2px solid transparent;
         }
         .thumbnail:hover {
             transform: scale(1.05);
-        }
-        .thumbnail.selected {
-            border-color: var(--brand);
-            box-shadow: 0 0 10px rgba(255, 122, 0, 0.5);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
         /* Lightbox styles */
         .lightbox {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.9);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-            padding: 20px;
+            display: none; justify-content: center; align-items: center;
+            z-index: 2000; padding: 20px;
         }
-        .lightbox.show {
-            display: flex;
-        }
+        .lightbox.show { display: flex; }
         .lightbox-content {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            align-items: center;
-            max-width: 90%;
-            max-height: 90%;
+            position: relative; display: flex; flex-direction: column;
+            gap: 16px; align-items: center; max-width: 90%; max-height: 90%;
         }
-        .lightbox-content img {
-            max-width: 100%;
-            max-height: 80vh;
-            border-radius: 12px;
-        }
+        .lightbox-content img { max-width: 100%; max-height: 80vh; border-radius: 12px; }
         .lightbox-btn {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: rgba(255, 255, 255, 0.2); color: white; border: none;
+            width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+            transition: background-color 0.2s; display: flex;
+            align-items: center; justify-content: center; font-size: 1.5rem;
         }
-        .lightbox-btn:hover {
-            background: rgba(255, 255, 255, 0.4);
-        }
+        .lightbox-btn:hover { background: rgba(255, 255, 255, 0.4); }
         .lightbox-nav {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 20px;
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 100%; display: flex; justify-content: space-between; padding: 0 20px;
         }
-        .lightbox-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 2rem;
-            color: white;
-        }
-        /* Style for pagination buttons */
+        .lightbox-close { position: absolute; top: 20px; right: 20px; font-size: 2rem; }
+        
+        /* Pagination buttons */
         .pagination-btn {
-            padding: 6px 12px; /* Reduced padding */
-            border-radius: 8px;
-            font-weight: 600;
-            background-color: var(--brand);
-            color: white;
-            font-size: 0.875rem; /* Small font size */
+            padding: 8px 14px; border-radius: 8px; font-weight: 600;
+            background-color: var(--brand); color: white; font-size: 0.875rem;
         }
-        .pagination-btn:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
+        .pagination-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .fade-in-delay-1 { animation-delay: 0.1s; }
+        .fade-in-delay-2 { animation-delay: 0.2s; }
+        .fade-in-delay-3 { animation-delay: 0.3s; }
+        .fade-in-delay-4 { animation-delay: 0.4s; }
+
         /* Mobile specific adjustments */
         @media (max-width: 640px) {
-            body {
-                background-color: #ffffff;
-            }
+            body { background-color: #ffffff; }
             .card {
-                width: 100vw;
-                min-height: 100vh;
-                padding: 16px;
-                border: none;
-                border-radius: 0;
-                box-shadow: none;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
+                width: 100vw; min-height: 100vh; padding: 16px; border: none;
+                border-radius: 0; box-shadow: none; justify-content: space-between;
             }
             #results-grid {
-                flex-grow: 1;
-                max-height: none;
-                overflow-y: auto;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 8px; /* Reduced gap between images */
+                flex-grow: 1; max-height: none; overflow-y: auto;
+                grid-template-columns: repeat(2, 1fr); gap: 8px;
             }
-            .result-header {
-                margin-bottom: 8px; /* Smaller margin below header */
-            }
-            .result-header h2 {
-                font-size: 1.25rem; /* Smaller font for title */
-                margin-bottom: 4px; /* Reduced margin */
-            }
-            .result-header p {
-                font-size: 0.875rem; /* Smaller font for count */
-            }
+            .result-header h2 { font-size: 1.25rem; }
         }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
 
-    <!-- Configuration from user's file -->
     <script>
         window.API = {
             BASE: "https://rcna9ik984.execute-api.ap-south-1.amazonaws.com/search",
@@ -201,83 +151,88 @@
         };
     </script>
 
-    <!-- Main Container Card -->
-    <div id="main-ui" class="card w-full max-w-lg p-6 sm:p-8 rounded-xl shadow-lg border border-orange-200">
-
-        <!-- Splash / Landing Screen -->
-        <div id="splash-screen" class="flex flex-col items-center justify-center text-center">
-            <h1 class="text-3xl sm:text-4xl font-bold text-orange-600 mb-2">सेल्फी सत्यापन</h1>
-            <p class="text-gray-600 mb-8 font-semibold">
-                भारतीय जनता पार्टी जिला मंदसौर "माननीय जिला अध्यक्ष जी के साथ एवं भाजपा के विभिन्न कार्यक्रमों से सम्बंधित आप के फोटो यहाँ से प्राप्त करे"
-            </p>
-            <button id="start-button" class="w-full btn primary">
-                कैमरा शुरू करें
-            </button>
-        </div>
-
-        <!-- Camera Screen -->
-        <div id="camera-screen" class="hidden flex flex-col items-center justify-center">
-            <h2 class="text-2xl font-bold text-orange-600 mb-4">सेल्फी लें</h2>
-            <div class="media relative w-full mb-6">
-                <video id="video-feed" playsinline class="hidden"></video>
-                <img id="preview-image" alt="Preview" class="hidden" />
-                <span id="camera-placeholder" class="text-gray-400">कैमरा शुरू हो रहा है...</span>
-            </div>
-            
-            <div class="flex space-x-4 w-full justify-center">
-                <button id="capture-button" class="flex-1 btn primary" disabled>
-                    कैप्चर करें
-                </button>
-                <button id="retake-button" class="flex-1 btn ghost hidden">
-                    पुनः प्रयास करें
+    <div id="main-ui" class="card w-full max-w-lg p-6 sm:p-8 rounded-xl shadow-lg border border-gray-200">
+        <div class="flex-grow">
+            <!-- Splash / Landing Screen -->
+            <div id="splash-screen" class="flex flex-col items-center justify-center text-center h-full">
+                <div class="mb-4 fade-in">
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="#FF9933"/>
+                        <path d="M12 5c-3.86 0-7 3.14-7 7s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm0 12c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z" fill="#FFFFFF"/>
+                        <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" fill="#138808"/>
+                        <path d="M12 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z" fill="#000080"/>
+                    </svg>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-orange-600 mb-2 fade-in fade-in-delay-1 opacity-0">भारतीय जनता पार्टी, जिला मंदसौर</h1>
+                <h2 class="text-xl font-semibold text-gray-700 mb-4 fade-in fade-in-delay-2 opacity-0">फोटो सत्यापन</h2>
+                <p class="text-gray-600 mb-8 font-medium fade-in fade-in-delay-3 opacity-0">
+                    माननीय जिला अध्यक्ष श्री राजेश दीक्षित जी के साथ आपके फोटो एवं भाजपा के विभिन्न कार्यक्रमों के फोटो यहाँ से प्राप्त करें।
+                </p>
+                <button id="start-button" class="w-full btn primary fade-in fade-in-delay-4 opacity-0">
+                    कैमरा शुरू करें
                 </button>
             </div>
-        </div>
-        
-        <!-- Processing / Loading Screen -->
-        <div id="processing-screen" class="hidden flex-col items-center justify-center text-center">
-            <svg class="animate-spin h-16 w-16 text-orange-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p class="text-lg font-semibold text-gray-700">आपके फोटो खोजे जा रहे हैं...</p>
-            <p class="text-sm text-gray-500 mt-2">इसमें कुछ सेकंड लग सकते हैं।</p>
-        </div>
 
-        <!-- Result Screen -->
-        <div id="result-screen" class="hidden flex-col items-center justify-center text-center">
-            <div class="result-header">
-                <h2 class="text-xl font-bold text-orange-600 mb-0">भारतीय जनता पार्टी मंदसौर</h2>
-                <p class="text-md font-semibold text-gray-700 mt-2">डेटाबेस में उपलब्ध आपके फोटो</p>
-                <p id="results-count" class="text-gray-600 mt-1 text-sm mb-2"></p>
+            <!-- Camera Screen -->
+            <div id="camera-screen" class="hidden flex flex-col items-center justify-center relative">
+                 <button id="back-to-splash" class="absolute top-0 left-0 text-gray-500 hover:text-orange-600 p-2 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <h2 class="text-2xl font-bold text-orange-600 mb-4">सेल्फी लें</h2>
+                <div class="media relative w-full mb-6">
+                    <video id="video-feed" playsinline class="hidden"></video>
+                    <img id="preview-image" alt="Preview" class="hidden" />
+                    <span id="camera-placeholder" class="text-gray-400">कैमरा शुरू हो रहा है...</span>
+                </div>
+                <div class="flex space-x-4 w-full justify-center">
+                    <button id="capture-button" class="flex-1 btn primary" disabled>फोटो खींचें</button>
+                    <button id="retake-button" class="flex-1 btn ghost hidden">पुनः प्रयास करें</button>
+                </div>
             </div>
             
-            <div id="results-grid" class="grid grid-cols-2 md:grid-cols-3 gap-2 w-full mb-6 max-h-[70vh] overflow-y-auto p-2">
-                <!-- Thumbnails will be populated here -->
+            <!-- Processing Screen -->
+            <div id="processing-screen" class="hidden flex-col items-center justify-center text-center h-full">
+                <svg class="animate-spin h-16 w-16 text-orange-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="text-lg font-semibold text-gray-700">आपके फोटो खोजे जा रहे हैं...</p>
+                <p class="text-sm text-gray-500 mt-2">इसमें कुछ सेकंड लग सकते हैं। कृपया प्रतीक्षा करें।</p>
             </div>
-            <p id="no-results" class="text-gray-500 hidden">कोई परिणाम नहीं मिला।</p>
 
-            <!-- Pagination Controls -->
-            <div id="pagination-controls" class="flex justify-between items-center w-full max-w-xs mx-auto mt-4 hidden">
-                <button id="prev-page-btn" class="pagination-btn" disabled>&lt; पिछला</button>
-                <span id="page-info" class="text-sm text-gray-600"></span>
-                <button id="next-page-btn" class="pagination-btn" disabled>अगला &gt;</button>
+            <!-- Result Screen -->
+            <div id="result-screen" class="hidden flex-col h-full">
+                <div class="result-header text-center mb-4">
+                    <h2 class="text-xl font-bold text-orange-600">आपके खोज परिणाम</h2>
+                    <p id="results-count" class="text-gray-600 mt-1 text-sm"></p>
+                </div>
+                <div id="results-grid" class="grid grid-cols-2 md:grid-cols-3 gap-2 w-full flex-grow overflow-y-auto p-1">
+                    <!-- Thumbnails will be populated here -->
+                </div>
+                <p id="no-results" class="text-gray-500 hidden text-center my-auto">कोई परिणाम नहीं मिला। कृपया पुनः प्रयास करें।</p>
+                <div id="pagination-controls" class="flex justify-between items-center w-full max-w-xs mx-auto mt-4 hidden">
+                    <button id="prev-page-btn" class="pagination-btn" disabled>&lt; पिछला</button>
+                    <span id="page-info" class="text-sm text-gray-600"></span>
+                    <button id="next-page-btn" class="pagination-btn" disabled>अगला &gt;</button>
+                </div>
+                 <button id="search-again-button" class="w-full max-w-xs mx-auto btn ghost mt-4 hidden">नई खोज करें</button>
             </div>
         </div>
+        <footer class="text-center text-xs text-gray-400 mt-8 pt-4 border-t border-gray-100">
+            &copy; <span id="footer-year"></span> भारतीय जनता पार्टी, जिला मंदसौर
+        </footer>
     </div>
 
-    <!-- Message Box -->
     <div id="message-box" class="message-box hidden bg-gray-800 text-white p-4 rounded-lg shadow-xl text-center">
         <p id="message-text"></p>
     </div>
 
-    <!-- Lightbox -->
     <div id="lightbox" class="lightbox">
         <div class="lightbox-content">
             <img id="lightbox-image" src="" alt="Full size result" class="rounded-xl">
-            <button id="download-lightbox-button" class="btn primary">
-                फोटो डाउनलोड करें
-            </button>
+            <button id="download-lightbox-button" class="btn primary">फोटो डाउनलोड करें</button>
         </div>
         <button id="lightbox-close" class="lightbox-btn lightbox-close">&times;</button>
         <div class="lightbox-nav">
@@ -287,17 +242,16 @@
     </div>
 
     <script>
-        // Handle unhandled promise rejections to prevent silent errors
         window.addEventListener('unhandledrejection', (event) => {
             console.error('An unhandled promise rejection occurred:', event.reason);
         });
 
-        // API Configuration (from user's uploaded file)
+        // Config
         const BASE = window.API.BASE.replace(/\/$/, "");
         const LINK_ID = window.API.LINK_ID;
         const THRESHOLD = window.API.THRESHOLD;
         const MAX_RESULTS = window.API.MAX_RESULTS;
-        const RESULTS_PER_PAGE = 9; // Number of thumbnails to show per page
+        const RESULTS_PER_PAGE = 9;
 
         // UI elements
         const splashScreen = document.getElementById('splash-screen');
@@ -315,6 +269,8 @@
         const resultsCountEl = document.getElementById('results-count');
         const messageBox = document.getElementById('message-box');
         const messageText = document.getElementById('message-text');
+        const searchAgainButton = document.getElementById('search-again-button');
+        const backToSplashButton = document.getElementById('back-to-splash');
         
         // Lightbox elements
         const lightbox = document.getElementById('lightbox');
@@ -338,25 +294,20 @@
         let currentPage = 1;
         let lbIndex = -1;
 
-        // Function to show a specific screen and hide others
         function showScreen(screen) {
-            splashScreen.classList.add('hidden');
-            cameraScreen.classList.add('hidden');
-            processingScreen.classList.add('hidden');
-            resultScreen.classList.add('hidden');
+            [splashScreen, cameraScreen, processingScreen, resultScreen].forEach(s => s.classList.add('hidden'));
             screen.classList.remove('hidden');
+            if (screen.id !== 'splash-screen') {
+                 screen.classList.add('flex', 'flex-col');
+            }
         }
 
-        // Custom function to show messages
         function showMessage(text, duration = 3000) {
             messageText.innerText = text;
             messageBox.classList.remove('hidden');
-            setTimeout(() => {
-                messageBox.classList.add('hidden');
-            }, duration);
+            setTimeout(() => { messageBox.classList.add('hidden'); }, duration);
         }
 
-        // Start camera feed
         async function startCamera() {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
@@ -374,7 +325,6 @@
             }
         }
 
-        // Stop camera feed
         function stopCamera() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
@@ -382,7 +332,6 @@
             }
         }
 
-        // Capture photo
         function capturePhoto() {
             if (!videoFeed.videoWidth) {
                 showMessage('वीडियो स्ट्रीम उपलब्ध नहीं है।');
@@ -402,7 +351,6 @@
             }, 'image/jpeg', 0.92);
         }
 
-        // Submit photo to backend
         async function submitPhoto() {
             if (!capturedImageBlob) {
                 showMessage('कोई फोटो कैप्चर नहीं की गई।');
@@ -420,13 +368,8 @@
                     imageBase64: base64data,
                     threshold: THRESHOLD,
                     maxResults: MAX_RESULTS,
+                    linkId: LINK_ID
                 };
-                
-                if (LINK_ID) {
-                    body.linkId = LINK_ID;
-                } else {
-                    body.allowedFolders = [window.API.DEFAULT_FOLDER];
-                }
 
                 try {
                     const response = await fetch(`${BASE}/search`, {
@@ -435,12 +378,12 @@
                         body: JSON.stringify(body),
                     });
 
-                    const result = await response.json();
-                    
                     if (!response.ok) {
-                        throw new Error(result.error || `Server returned status ${response.status}`);
+                       const errorResult = await response.json().catch(() => ({ error: 'Unknown server error' }));
+                       throw new Error(errorResult.error || `Server returned status ${response.status}`);
                     }
-
+                    
+                    const result = await response.json();
                     allResults = result.results || [];
                     currentPage = 1;
                     displayResults();
@@ -448,25 +391,27 @@
                 } catch (error) {
                     console.error("API Error:", error);
                     showMessage('सत्यापन में कोई समस्या आई। कृपया फिर से प्रयास करें।');
+                    allResults = []; // Clear results on error
                     displayResults();
                 }
             };
         }
-
-        // Display results with pagination
+        
         function displayResults() {
+            showScreen(resultScreen);
+            searchAgainButton.classList.remove('hidden');
             if (allResults.length === 0) {
                 noResultsMessage.classList.remove('hidden');
+                resultsGrid.classList.add('hidden');
                 resultsCountEl.classList.add('hidden');
                 paginationControls.classList.add('hidden');
             } else {
                 noResultsMessage.classList.add('hidden');
+                resultsGrid.classList.remove('hidden');
                 resultsCountEl.classList.remove('hidden');
-                paginationControls.classList.remove('hidden');
                 resultsCountEl.textContent = `कुल ${allResults.length} फोटो मिले।`;
                 renderResultsPage();
             }
-            showScreen(resultScreen);
         }
 
         function renderResultsPage() {
@@ -479,26 +424,26 @@
                 const img = document.createElement('img');
                 img.src = result.thumbnailUrl || result.downloadUrl;
                 img.alt = `Match Result ${startIndex + index + 1}`;
-                img.className = 'w-full h-auto rounded thumbnail aspect-square object-cover';
+                img.className = 'w-full h-auto rounded-lg thumbnail aspect-square object-cover';
                 img.dataset.index = startIndex + index;
-
-                img.addEventListener('click', () => {
-                    showLightbox(parseInt(img.dataset.index, 10));
-                });
+                img.addEventListener('click', () => showLightbox(parseInt(img.dataset.index, 10)));
                 resultsGrid.appendChild(img);
             });
-
             updatePaginationControls();
         }
 
         function updatePaginationControls() {
             const totalPages = Math.ceil(allResults.length / RESULTS_PER_PAGE);
-            pageInfo.textContent = `पेज ${currentPage} / ${totalPages}`;
-            prevPageBtn.disabled = currentPage === 1;
-            nextPageBtn.disabled = currentPage >= totalPages;
+            if (totalPages <= 1) {
+                paginationControls.classList.add('hidden');
+            } else {
+                paginationControls.classList.remove('hidden');
+                pageInfo.textContent = `पेज ${currentPage} / ${totalPages}`;
+                prevPageBtn.disabled = currentPage === 1;
+                nextPageBtn.disabled = currentPage >= totalPages;
+            }
         }
 
-        // Lightbox functions
         function showLightbox(index) {
             lbIndex = index;
             updateLightbox();
@@ -537,6 +482,16 @@
                 showMessage('डाउनलोड विफल रहा। कृपया पुनः प्रयास करें।');
             }
         }
+        
+        function resetToSplash() {
+            stopCamera();
+            allResults = [];
+            currentPage = 1;
+            capturedImageBlob = null;
+            resultsGrid.innerHTML = '';
+            if(previewImage) previewImage.src = '';
+            showScreen(splashScreen);
+        }
 
         // Event listeners
         startButton.addEventListener('click', () => {
@@ -555,12 +510,14 @@
             startCamera();
         });
 
-        // Pagination Event Listeners
+        searchAgainButton.addEventListener('click', resetToSplash);
+        backToSplashButton.addEventListener('click', resetToSplash);
+
         prevPageBtn.addEventListener('click', () => {
             if (currentPage > 1) {
                 currentPage--;
                 renderResultsPage();
-                resultsGrid.scrollTop = 0; // Scroll to top of the grid
+                resultsGrid.scrollTop = 0;
             }
         });
 
@@ -569,7 +526,7 @@
             if (currentPage < totalPages) {
                 currentPage++;
                 renderResultsPage();
-                resultsGrid.scrollTop = 0; // Scroll to top of the grid
+                resultsGrid.scrollTop = 0;
             }
         });
 
@@ -578,9 +535,7 @@
         lightboxPrev.addEventListener('click', () => step(-1));
         lightboxNext.addEventListener('click', () => step(1));
         lightbox.addEventListener('click', (e) => {
-            if (e.target === lightbox) {
-                closeLightbox();
-            }
+            if (e.target === lightbox) closeLightbox();
         });
         window.addEventListener('keydown', (e) => {
             if (lightbox.classList.contains('show')) {
@@ -589,6 +544,9 @@
                 if (e.key === 'ArrowRight') step(1);
             }
         });
+
+        // Initial setup
+        document.getElementById('footer-year').textContent = new Date().getFullYear();
     </script>
 </body>
 </html>
