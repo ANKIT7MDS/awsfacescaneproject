@@ -151,6 +151,30 @@
             background-color: #ccc;
             cursor: not-allowed;
         }
+
+        /* Full-screen layout for mobile */
+        @media (max-width: 640px) {
+            body {
+                background-color: #ffffff;
+            }
+            .card {
+                width: 100vw;
+                min-height: 100vh;
+                padding: 16px;
+                border: none;
+                border-radius: 0;
+                box-shadow: none;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+            #results-grid {
+                flex-grow: 1;
+                max-height: none;
+                overflow-y: auto;
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
